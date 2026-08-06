@@ -38,6 +38,16 @@ jobs:
             make app APP_VERSION="${GITHUB_REF_NAME#v}"
           fi
 
+      - name: Launch smoke test
+        run: |
+          set -euo pipefail
+          CLABAR_NO_AUTOINSTALL=1 CLABAR_DATA_DIR="$RUNNER_TEMP/clabar-smoke" \
+            ./build/Clabar.app/Contents/MacOS/Clabar &
+          APP_PID=$!
+          sleep 6
+          curl -sf -m 3 http://127.0.0.1:8737/ping
+          kill "$APP_PID"
+
       - name: Package
         run: ditto -c -k --sequesterRsrc --keepParent build/Clabar.app Clabar.zip
 

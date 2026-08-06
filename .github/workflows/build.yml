@@ -14,3 +14,13 @@ jobs:
         run: swift build
       - name: Test
         run: swift test
+      - name: App bundle + launch smoke test
+        run: |
+          set -euo pipefail
+          make app
+          CLABAR_NO_AUTOINSTALL=1 CLABAR_DATA_DIR="$RUNNER_TEMP/clabar-smoke" \
+            ./build/Clabar.app/Contents/MacOS/Clabar &
+          APP_PID=$!
+          sleep 6
+          curl -sf -m 3 http://127.0.0.1:8737/ping
+          kill "$APP_PID"

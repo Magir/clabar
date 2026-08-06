@@ -81,8 +81,30 @@ private func drawDashedBar(x: CGFloat, y: CGFloat, width: CGFloat, height: CGFlo
     path.stroke()
 }
 
+// Do NOT use Bundle.module here: SPM's generated accessor for executables only
+// checks the .app root and the ABSOLUTE build path of the build machine — a
+// CI-built app fatally crashes on any other machine. (Upstream has the same
+// workaround in AppResources.swift.)
+private final class BundleFinder {}
+
+private func clabarResourceBundle() -> Bundle? {
+    let bundleName = "Clabar_Clabar.bundle"
+    let candidates: [URL?] = [
+        Bundle.main.resourceURL,
+        Bundle.main.bundleURL,
+        Bundle(for: BundleFinder.self).resourceURL,
+        Bundle.main.executableURL?.deletingLastPathComponent(),
+    ]
+    for case let candidate? in candidates {
+        if let bundle = Bundle(url: candidate.appendingPathComponent(bundleName)) {
+            return bundle
+        }
+    }
+    return nil
+}
+
 private let claudeLogoImage: NSImage? = {
-    guard let url = Bundle.module.url(forResource: "claude-logo", withExtension: "png") else { return nil }
+    guard let url = clabarResourceBundle()?.url(forResource: "claude-logo", withExtension: "png") else { return nil }
     return NSImage(contentsOf: url)
 }()
 
