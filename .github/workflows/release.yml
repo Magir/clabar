@@ -105,11 +105,10 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      # Note: Pages deployments have a server-side 10-minute cap — raising the
+      # action's timeout does nothing. If deployments sit in deployment_queued
+      # forever, the Pages site is wedged: recreate it
+      # (DELETE /repos/{o}/{r}/pages, POST with build_type=workflow).
       - name: Deploy appcast
         id: deployment
         uses: actions/deploy-pages@v4
-        with:
-          # Pages deployments on this repo have sat in deployment_queued for
-          # >10 min; the action's default 10-min timeout then fails the job
-          # while the deployment still lands later.
-          timeout: 1800000
