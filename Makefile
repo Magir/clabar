@@ -16,6 +16,7 @@ app:
 	@if [ -n "$(SU_FEED_URL)" ]; then plutil -replace SUFeedURL -string "$(SU_FEED_URL)" $(APP)/Contents/Info.plist; fi
 	@if [ -n "$(SPARKLE_PUB_KEY)" ]; then plutil -replace SUPublicEDKey -string "$(SPARKLE_PUB_KEY)" $(APP)/Contents/Info.plist; fi
 	cp $(BINARY) $(APP)/Contents/MacOS/Clabar
+	cp bundle/AppIcon.icns $(APP)/Contents/Resources/AppIcon.icns
 	if [ -d "$(BUNDLE)" ]; then cp -R "$(BUNDLE)" $(APP)/Contents/Resources/; fi
 	@FW=$$(find .build/artifacts -type d -name Sparkle.framework 2>/dev/null | head -1); \
 	if [ -n "$$FW" ]; then cp -R "$$FW" $(APP)/Contents/Frameworks/; else echo "warning: Sparkle.framework not found"; fi
