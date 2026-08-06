@@ -35,6 +35,8 @@ Alternatively, [download Clabar.zip](https://github.com/Magir/clabar/releases/la
 - **Notification history**: a separate window with a sortable table, filters by type / unread / free-text search. Double-click opens the session.
 - **“Burn the limit” reminder**: when less than N% of the weekly window is used and the reset is under M hours away — 🔥 in the icon and a banner in the popover.
 - **“Running low” warning**: the reverse — when any window (5-hour, weekly, per-model) is above a configurable threshold (85% by default), ⚠️ in the icon and a red banner.
+- **Global hotkey**: ⌘U (configurable in Settings) opens the popover from anywhere.
+- **Claude service health**: the popover shows the live status.claude.com state — “All Systems Operational” or the incident summary, clickable during incidents.
 - **Zero-config setup**: hooks are installed automatically on first launch. One-click DevContainer setup.
 - **Localization**: English, Русский, Español, Português, Français, Deutsch, Українська — auto-detected from the system language, with a manual override in Settings.
 
