@@ -185,6 +185,27 @@ final class HookInstallerTests: XCTestCase {
     }
 }
 
+final class ServiceStatusTests: XCTestCase {
+    func testDecodeOperationalAndIncident() throws {
+        let ok = try XCTUnwrap(ServiceStatus.decode(from: Data(
+            #"{"page":{"id":"x"},"status":{"indicator":"none","description":"All Systems Operational"}}"#.utf8)))
+        XCTAssertTrue(ok.isOperational)
+
+        let bad = try XCTUnwrap(ServiceStatus.decode(from: Data(
+            #"{"status":{"indicator":"major","description":"Elevated errors on Claude API"}}"#.utf8)))
+        XCTAssertFalse(bad.isOperational)
+        XCTAssertEqual(bad.description, "Elevated errors on Claude API")
+
+        XCTAssertNil(ServiceStatus.decode(from: Data("not json".utf8)))
+    }
+
+    func testHotkeyKeyCodesCoverAllOfferedKeys() {
+        for key in HotkeyCenter.availableKeys {
+            XCTAssertNotNil(HotkeyCenter.keyCodes[key], "no key code for \(key)")
+        }
+    }
+}
+
 final class LocalizationTests: XCTestCase {
     override func tearDown() {
         UserDefaults.standard.removeObject(forKey: Lang.defaultsKey)

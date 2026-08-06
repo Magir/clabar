@@ -137,12 +137,53 @@ struct PopoverView: View {
             if let extra = response.extraUsage, extra.isEnabled {
                 ExtraUsageRow(extra: extra)
             }
+            if let status = usage.serviceStatus {
+                serviceStatusChip(status)
+            }
             if let updated = usage.lastUpdated {
                 Text("\(L("Обновлено", "Updated")) \(updated, style: .relative) \(L("назад", "ago"))")
                     .font(.caption2).foregroundStyle(.tertiary)
             }
         } else {
             ProgressView().frame(maxWidth: .infinity)
+        }
+    }
+
+    @ViewBuilder
+    private func serviceStatusChip(_ status: ServiceStatus) -> some View {
+        let label = HStack(spacing: 5) {
+            Circle()
+                .fill(statusColor(status.indicator))
+                .frame(width: 7, height: 7)
+            Text(status.isOperational
+                 ? L("Все системы работают", "All Systems Operational")
+                 : status.description)
+                .font(.caption2)
+                .foregroundStyle(status.isOperational ? .secondary : .primary)
+            if !status.isOperational {
+                Image(systemName: "arrow.up.right.square").font(.caption2).foregroundStyle(.secondary)
+            }
+        }
+        if status.isOperational {
+            label
+        } else {
+            Button {
+                NSWorkspace.shared.open(URL(string: "https://status.claude.com/")!)
+            } label: {
+                label.contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private func statusColor(_ indicator: String) -> Color {
+        switch indicator {
+        case "none": return .green
+        case "minor": return .yellow
+        case "major": return .orange
+        case "critical": return .red
+        case "maintenance": return .blue
+        default: return .gray
         }
     }
 

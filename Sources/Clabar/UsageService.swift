@@ -6,11 +6,30 @@ import AppKit
 // Ported from Blimp-Labs/claude-usage-bar (BSD-2-Clause); trimmed and adapted
 // to dynamic buckets.
 
+/// claude.com service health from the public Statuspage API.
+struct ServiceStatus: Equatable {
+    let indicator: String   // none | minor | major | critical | maintenance
+    let description: String
+
+    var isOperational: Bool { indicator == "none" }
+
+    static func decode(from data: Data) -> ServiceStatus? {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let status = json["status"] as? [String: Any],
+              let indicator = status["indicator"] as? String else { return nil }
+        return ServiceStatus(
+            indicator: indicator,
+            description: (status["description"] as? String) ?? indicator
+        )
+    }
+}
+
 @MainActor
 final class UsageService: ObservableObject {
     @Published var usage: UsageResponse?
     @Published var lastError: String?
     @Published var lastUpdated: Date?
+    @Published var serviceStatus: ServiceStatus?
     @Published var isAuthenticated = false
     @Published var isAwaitingCode = false
     @Published private(set) var accountEmail: String?
@@ -189,6 +208,9 @@ final class UsageService: ObservableObject {
     // MARK: - Fetch
 
     func fetchUsage() async {
+        // Piggy-back the claude.com health check on every usage poll.
+        Task { await fetchServiceStatus() }
+
         guard credentialsStore.load(defaultScopes: Self.defaultOAuthScopes) != nil else {
             lastError = L("Не выполнен вход", "Not signed in")
             isAuthenticated = false
@@ -219,6 +241,15 @@ final class UsageService: ObservableObject {
         } catch {
             lastError = error.localizedDescription
         }
+    }
+
+    nonisolated private static let statusEndpoint = URL(string: "https://status.claude.com/api/v2/status.json")!
+
+    func fetchServiceStatus() async {
+        guard let (data, response) = try? await session.data(from: Self.statusEndpoint),
+              (response as? HTTPURLResponse)?.statusCode == 200,
+              let status = ServiceStatus.decode(from: data) else { return } // keep the last known state
+        serviceStatus = status
     }
 
     func fetchProfile() async {

@@ -30,6 +30,13 @@ struct SettingsView: View {
     @AppStorage("recordFor.error") private var recordError = true
     @AppStorage("recordFor.info") private var recordInfo = true
 
+    @AppStorage(SettingsKeys.hotkeyEnabled) private var hotkeyEnabled = true
+    @AppStorage(SettingsKeys.hotkeyKey) private var hotkeyKey = "U"
+    @AppStorage(SettingsKeys.hotkeyCmd) private var hotkeyCmd = true
+    @AppStorage(SettingsKeys.hotkeyOption) private var hotkeyOption = false
+    @AppStorage(SettingsKeys.hotkeyControl) private var hotkeyControl = false
+    @AppStorage(SettingsKeys.hotkeyShift) private var hotkeyShift = false
+
     @State private var devcontainerMessage: String?
     @State private var showSnippet = false
     @State private var launchAtLogin = false
@@ -51,6 +58,32 @@ struct SettingsView: View {
                         launchAtLogin = LoginItem.isEnabled
                     }
                 ))
+
+                Toggle(L("Глобальный хоткей открытия панели", "Global hotkey to open the popover"), isOn: $hotkeyEnabled)
+                    .onChange(of: hotkeyEnabled) { model.applyHotkey() }
+                if hotkeyEnabled {
+                    HStack(spacing: 6) {
+                        Toggle("⌘", isOn: $hotkeyCmd).toggleStyle(.button)
+                        Toggle("⌥", isOn: $hotkeyOption).toggleStyle(.button)
+                        Toggle("⌃", isOn: $hotkeyControl).toggleStyle(.button)
+                        Toggle("⇧", isOn: $hotkeyShift).toggleStyle(.button)
+                        Picker(L("Клавиша", "Key"), selection: $hotkeyKey) {
+                            ForEach(HotkeyCenter.availableKeys, id: \.self) { key in
+                                Text(key).tag(key)
+                            }
+                        }
+                        .frame(maxWidth: 140)
+                    }
+                    .onChange(of: hotkeyCmd) { model.applyHotkey() }
+                    .onChange(of: hotkeyOption) { model.applyHotkey() }
+                    .onChange(of: hotkeyControl) { model.applyHotkey() }
+                    .onChange(of: hotkeyShift) { model.applyHotkey() }
+                    .onChange(of: hotkeyKey) { model.applyHotkey() }
+                    if !hotkeyCmd && !hotkeyOption && !hotkeyControl && !hotkeyShift {
+                        Text(L("Нужен хотя бы один модификатор.", "At least one modifier is required."))
+                            .font(.caption).foregroundStyle(.orange)
+                    }
+                }
             }
 
             Section(L("Язык / Language", "Language / Язык")) {

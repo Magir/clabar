@@ -12,6 +12,12 @@ enum SettingsKeys {
     static let lowWarnEnabled = "lowWarnEnabled"
     static let lowWarnThresholdPct = "lowWarnThresholdPct" // Int 0-100
     static let serverPort = "serverPort"
+    static let hotkeyEnabled = "hotkeyEnabled"
+    static let hotkeyKey = "hotkeyKey"
+    static let hotkeyCmd = "hotkeyCmd"
+    static let hotkeyOption = "hotkeyOption"
+    static let hotkeyControl = "hotkeyControl"
+    static let hotkeyShift = "hotkeyShift"
 
     static func registerDefaults() {
         UserDefaults.standard.register(defaults: [
@@ -24,6 +30,9 @@ enum SettingsKeys {
             lowWarnEnabled: true,
             lowWarnThresholdPct: 85,
             serverPort: Int(HookInstaller.defaultPort),
+            hotkeyEnabled: true,
+            hotkeyKey: "U",
+            hotkeyCmd: true,
         ])
     }
 }
@@ -70,6 +79,24 @@ final class AppModel: ObservableObject {
         clockTimer = Timer.publish(every: 300, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] date in self?.now = date }
+
+        HotkeyCenter.shared.action = { Task { @MainActor in MenuBarToggle.toggle() } }
+        applyHotkey()
+    }
+
+    func applyHotkey() {
+        let defaults = UserDefaults.standard
+        guard defaults.bool(forKey: SettingsKeys.hotkeyEnabled) else {
+            HotkeyCenter.shared.unregister()
+            return
+        }
+        HotkeyCenter.shared.register(
+            key: defaults.string(forKey: SettingsKeys.hotkeyKey) ?? "U",
+            cmd: defaults.bool(forKey: SettingsKeys.hotkeyCmd),
+            option: defaults.bool(forKey: SettingsKeys.hotkeyOption),
+            control: defaults.bool(forKey: SettingsKeys.hotkeyControl),
+            shift: defaults.bool(forKey: SettingsKeys.hotkeyShift)
+        )
     }
 
     var serverPort: UInt16 {
