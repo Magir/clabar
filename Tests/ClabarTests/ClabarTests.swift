@@ -333,6 +333,22 @@ final class EventClassifierTests: XCTestCase {
         XCTAssertEqual(event?.sourceName, "DevContainer")
     }
 
+    func testBypassPermissionsPromptsDropped() {
+        XCTAssertNil(EventClassifier.classify(payload: [
+            "hook_event_name": "PermissionRequest", "tool_name": "Bash",
+            "permission_mode": "bypassPermissions",
+        ], headers: [:]))
+        XCTAssertNil(EventClassifier.classify(payload: [
+            "hook_event_name": "Notification", "notification_type": "permission_prompt",
+            "message": "Claude needs your permission", "permission_mode": "bypassPermissions",
+        ], headers: [:]))
+        // A real question still matters even when permissions are bypassed.
+        XCTAssertEqual(EventClassifier.classify(payload: [
+            "hook_event_name": "PreToolUse", "tool_name": "AskUserQuestion",
+            "permission_mode": "bypassPermissions",
+        ], headers: [:])?.kind, .ask)
+    }
+
     func testUnsubscribedToolIsIgnored() {
         XCTAssertNil(EventClassifier.classify(payload: [
             "hook_event_name": "PreToolUse", "tool_name": "Bash",

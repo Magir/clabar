@@ -78,12 +78,17 @@ enum EventClassifier {
     static func classify(payload: [String: Any], headers: [String: String]) -> ClaudeEvent? {
         let hookEvent = payload["hook_event_name"] as? String ?? "?"
         let toolName = payload["tool_name"] as? String
+        // Sessions running with bypassPermissions auto-approve: their permission
+        // prompts never actually wait for the user — drop them as noise.
+        let bypassing = (payload["permission_mode"] as? String)?
+            .lowercased().contains("bypass") == true
 
         var kind: EventKind
         var message: String
 
         switch hookEvent {
         case "PermissionRequest":
+            guard !bypassing else { return nil }
             kind = .ask
             message = L("Требуется разрешение: ", "Permission needed: ") + (toolName ?? L("инструмент", "tool"))
             if let input = payload["tool_input"] as? [String: Any],
@@ -111,7 +116,10 @@ enum EventClassifier {
             let text = payload["message"] as? String ?? L("Уведомление Claude", "Claude notification")
             message = text
             switch type {
-            case "permission_prompt", "idle_prompt", "agent_needs_input", "elicitation_dialog":
+            case "permission_prompt":
+                guard !bypassing else { return nil }
+                kind = .ask
+            case "idle_prompt", "agent_needs_input", "elicitation_dialog":
                 kind = .ask
             case "agent_completed":
                 kind = .done
