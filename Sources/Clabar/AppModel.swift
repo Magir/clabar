@@ -80,7 +80,7 @@ final class AppModel: ObservableObject {
         server?.stop()
         let newServer = EventServer { [weak self] payload, headers in
             guard let event = EventClassifier.classify(payload: payload, headers: headers) else { return }
-            Task { @MainActor in self?.store.add(event) }
+            Task { @MainActor [weak self] in self?.store.add(event) }
         }
         do {
             try newServer.start(port: serverPort)
