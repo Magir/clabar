@@ -115,18 +115,18 @@ final class UsageService: ObservableObject {
     func submitOAuthCode(_ rawCode: String) async {
         let parts = rawCode.trimmingCharacters(in: .whitespacesAndNewlines).split(separator: "#", maxSplits: 1)
         guard let code = parts.first.map(String.init), !code.isEmpty else {
-            lastError = "Код не введён"
+            lastError = L("Код не введён", "No code entered")
             return
         }
         if parts.count > 1, String(parts[1]) != oauthState {
-            lastError = "OAuth state не совпал — попробуйте ещё раз"
+            lastError = L("OAuth state не совпал — попробуйте ещё раз", "OAuth state mismatch — try again")
             isAwaitingCode = false
             codeVerifier = nil
             oauthState = nil
             return
         }
         guard let verifier = codeVerifier else {
-            lastError = "Нет активного OAuth-потока"
+            lastError = L("Нет активного OAuth-потока", "No pending OAuth flow")
             isAwaitingCode = false
             return
         }
@@ -147,12 +147,12 @@ final class UsageService: ObservableObject {
             let (data, response) = try await session.data(for: request)
             guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
                 let status = (response as? HTTPURLResponse)?.statusCode ?? -1
-                lastError = "Обмен кода не удался: HTTP \(status)"
+                lastError = L("Обмен кода не удался: ", "Code exchange failed: ") + "HTTP \(status)"
                 return
             }
             guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let credentials = credentials(from: json) else {
-                lastError = "Не удалось разобрать ответ токена"
+                lastError = L("Не удалось разобрать ответ токена", "Could not parse token response")
                 return
             }
             try credentialsStore.save(credentials)
@@ -164,7 +164,7 @@ final class UsageService: ObservableObject {
             await fetchProfile()
             startPolling()
         } catch {
-            lastError = "Ошибка обмена кода: \(error.localizedDescription)"
+            lastError = L("Ошибка обмена кода: ", "Code exchange error: ") + error.localizedDescription
         }
     }
 
@@ -190,7 +190,7 @@ final class UsageService: ObservableObject {
 
     func fetchUsage() async {
         guard credentialsStore.load(defaultScopes: Self.defaultOAuthScopes) != nil else {
-            lastError = "Не выполнен вход"
+            lastError = L("Не выполнен вход", "Not signed in")
             isAuthenticated = false
             return
         }
@@ -199,7 +199,7 @@ final class UsageService: ObservableObject {
             if http.statusCode == 429 {
                 let retryAfter = http.value(forHTTPHeaderField: "Retry-After").flatMap(Double.init) ?? currentInterval
                 currentInterval = min(max(retryAfter, currentInterval * 2), Self.maxBackoffInterval)
-                lastError = "Rate limit — интервал увеличен до \(Int(currentInterval))с"
+                lastError = L("Rate limit — интервал увеличен до \(Int(currentInterval))с", "Rate limited — backing off to \(Int(currentInterval))s")
                 scheduleTimer()
                 return
             }
@@ -255,7 +255,7 @@ final class UsageService: ObservableObject {
         expireSessionOnAuthFailure: Bool = true
     ) async throws -> (Data, HTTPURLResponse)? {
         guard let initialCredentials = credentialsStore.load(defaultScopes: Self.defaultOAuthScopes) else {
-            lastError = "Не выполнен вход"
+            lastError = L("Не выполнен вход", "Not signed in")
             isAuthenticated = false
             return nil
         }
@@ -265,9 +265,9 @@ final class UsageService: ObservableObject {
             if refreshResult != .success, initialCredentials.isExpired() {
                 switch refreshResult {
                 case .permanentFailure:
-                    if expireSessionOnAuthFailure { expireSession(message: "Сессия истекла — войдите заново") }
+                    if expireSessionOnAuthFailure { expireSession(message: L("Сессия истекла — войдите заново", "Session expired — sign in again")) }
                 case .transientFailure:
-                    lastError = "Не удалось обновить токен — повторю позже"
+                    lastError = L("Не удалось обновить токен — повторю позже", "Token refresh failed — will retry")
                 case .success:
                     break
                 }
@@ -282,20 +282,20 @@ final class UsageService: ObservableObject {
         switch await refreshCredentials() {
         case .success:
             guard let refreshed = credentialsStore.load(defaultScopes: Self.defaultOAuthScopes) else {
-                if expireSessionOnAuthFailure { expireSession(message: "Сессия истекла — войдите заново") }
+                if expireSessionOnAuthFailure { expireSession(message: L("Сессия истекла — войдите заново", "Session expired — sign in again")) }
                 return nil
             }
             result = try await performAuthorizedRequest(token: refreshed.accessToken, url: url)
             if result.1.statusCode == 401 {
-                if expireSessionOnAuthFailure { expireSession(message: "Сессия истекла — войдите заново") }
+                if expireSessionOnAuthFailure { expireSession(message: L("Сессия истекла — войдите заново", "Session expired — sign in again")) }
                 return nil
             }
             return result
         case .permanentFailure:
-            if expireSessionOnAuthFailure { expireSession(message: "Сессия истекла — войдите заново") }
+            if expireSessionOnAuthFailure { expireSession(message: L("Сессия истекла — войдите заново", "Session expired — sign in again")) }
             return nil
         case .transientFailure:
-            lastError = "Не удалось обновить токен — повторю позже"
+            lastError = L("Не удалось обновить токен — повторю позже", "Token refresh failed — will retry")
             return nil
         }
     }

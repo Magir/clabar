@@ -8,10 +8,10 @@ enum EventKind: String, Codable, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .ask: return "Запрос"
-        case .done: return "Готово"
-        case .error: return "Сбой"
-        case .info: return "Инфо"
+        case .ask: return L("Запрос", "Ask")
+        case .done: return L("Готово", "Done")
+        case .error: return L("Сбой", "Failure")
+        case .info: return L("Инфо", "Info")
         }
     }
 
@@ -85,7 +85,7 @@ enum EventClassifier {
         switch hookEvent {
         case "PermissionRequest":
             kind = .ask
-            message = "Требуется разрешение: \(toolName ?? "инструмент")"
+            message = L("Требуется разрешение: ", "Permission needed: ") + (toolName ?? L("инструмент", "tool"))
             if let input = payload["tool_input"] as? [String: Any],
                let command = input["command"] as? String {
                 message += " — \(command.prefix(120))"
@@ -99,16 +99,16 @@ enum EventClassifier {
                    let first = questions.first?["question"] as? String {
                     message = first
                 } else {
-                    message = "Claude задаёт вопрос"
+                    message = L("Claude задаёт вопрос", "Claude has a question")
                 }
             case "ExitPlanMode":
-                message = "План готов к ревью"
+                message = L("План готов к ревью", "Plan is ready for review")
             default:
                 return nil // not subscribed to other tools
             }
         case "Notification":
             let type = payload["notification_type"] as? String ?? ""
-            let text = payload["message"] as? String ?? "Уведомление Claude"
+            let text = payload["message"] as? String ?? L("Уведомление Claude", "Claude notification")
             message = text
             switch type {
             case "permission_prompt", "idle_prompt", "agent_needs_input", "elicitation_dialog":
@@ -127,10 +127,10 @@ enum EventClassifier {
             kind = .done
             let last = (payload["last_assistant_message"] as? String)?
                 .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            message = last.isEmpty ? "Задача завершена" : String(last.prefix(300))
+            message = last.isEmpty ? L("Задача завершена", "Task finished") : String(last.prefix(300))
         case "PostToolUseFailure":
             kind = .error
-            var text = "Сбой инструмента \(toolName ?? "?")"
+            var text = L("Сбой инструмента ", "Tool failed: ") + (toolName ?? "?")
             if let error = payload["error"] as? String, !error.isEmpty {
                 text += ": \(error.prefix(150))"
             }
@@ -139,7 +139,7 @@ enum EventClassifier {
             let reason = payload["reason"] as? String ?? ""
             guard reason == "other" else { return nil } // normal endings are noise
             kind = .error
-            message = "Сессия завершилась аварийно"
+            message = L("Сессия завершилась аварийно", "Session ended abnormally")
         default:
             return nil
         }

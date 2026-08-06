@@ -4,6 +4,7 @@ struct PopoverView: View {
     @ObservedObject var model: AppModel
     @ObservedObject var usage: UsageService
     @ObservedObject var store: EventStore
+    @ObservedObject private var lang = LangObserver.shared
     @Environment(\.openWindow) private var openWindow
 
     init(model: AppModel) {
@@ -58,9 +59,9 @@ struct PopoverView: View {
             HStack(alignment: .top, spacing: 8) {
                 Text("🔥")
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("\(nudge.label): не потрачено \(Int(round(nudge.leftPct * 100)))% лимита")
+                    Text("\(nudge.label): \(L("не потрачено", "unused")) \(Int(round(nudge.leftPct * 100)))% \(L("лимита", "of the limit"))")
                         .font(.callout.weight(.semibold))
-                    Text("Сброс \(nudge.resetsAt, style: .relative) — самое время нагрузить Клода!")
+                    Text("\(L("Сброс", "Resets")) \(nudge.resetsAt, style: .relative) — \(L("самое время нагрузить Клода!", "time to put Claude to work!"))")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -83,7 +84,7 @@ struct PopoverView: View {
                 ExtraUsageRow(extra: extra)
             }
             if let updated = usage.lastUpdated {
-                Text("Обновлено \(updated, style: .relative) назад")
+                Text("\(L("Обновлено", "Updated")) \(updated, style: .relative) \(L("назад", "ago"))")
                     .font(.caption2).foregroundStyle(.tertiary)
             }
         } else {
@@ -96,12 +97,13 @@ struct PopoverView: View {
         if usage.isAwaitingCode {
             CodeEntryView(usage: usage)
         } else {
-            Text("Войдите, чтобы видеть лимиты.")
+            Text(L("Войдите, чтобы видеть лимиты.", "Sign in to see your usage limits."))
                 .font(.subheadline).foregroundStyle(.secondary)
-            Button("Войти через Claude") { usage.startOAuthFlow() }
+            Button(L("Войти через Claude", "Sign in with Claude")) { usage.startOAuthFlow() }
                 .buttonStyle(.borderedProminent)
                 .frame(maxWidth: .infinity)
-            Text("Вход нужен только для лимитов — уведомления, история и настройки работают и без него.")
+            Text(L("Вход нужен только для лимитов — уведомления, история и настройки работают и без него.",
+                   "Sign-in is only needed for limits — notifications, history and settings work without it."))
                 .font(.caption2).foregroundStyle(.tertiary)
         }
     }
@@ -111,7 +113,7 @@ struct PopoverView: View {
     private var notificationsSection: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text("Уведомления").font(.subheadline.weight(.semibold))
+                Text(L("Уведомления", "Notifications")).font(.subheadline.weight(.semibold))
                 if store.unreadCount > 0 {
                     Text("\(store.unreadCount)")
                         .font(.caption2.bold())
@@ -121,12 +123,13 @@ struct PopoverView: View {
                 }
                 Spacer()
                 if store.unreadCount > 0 {
-                    Button("Прочитать все") { store.markAllRead() }
+                    Button(L("Прочитать все", "Mark all read")) { store.markAllRead() }
                         .buttonStyle(.borderless).font(.caption)
                 }
             }
             if store.events.isEmpty {
-                Text("Пока пусто. События придут из хуков Claude Code.")
+                Text(L("Пока пусто. События придут из хуков Claude Code.",
+                       "Nothing yet. Events will arrive from Claude Code hooks."))
                     .font(.caption).foregroundStyle(.secondary)
             } else {
                 ForEach(store.events.prefix(6)) { event in
@@ -138,14 +141,14 @@ struct PopoverView: View {
 
     private var footer: some View {
         HStack(spacing: 12) {
-            Button("История…") { presentFront { openWindow(id: "log") } }
+            Button(L("История…", "History…")) { presentFront { openWindow(id: "log") } }
                 .buttonStyle(.borderless).font(.caption)
-            Button("Настройки…") { presentFront { openWindow(id: "settings") } }
+            Button(L("Настройки…", "Settings…")) { presentFront { openWindow(id: "settings") } }
                 .buttonStyle(.borderless).font(.caption)
             Spacer()
-            Button("Обновить") { Task { await usage.fetchUsage() } }
+            Button(L("Обновить", "Refresh")) { Task { await usage.fetchUsage() } }
                 .buttonStyle(.borderless).font(.caption)
-            Button("Выход") { NSApplication.shared.terminate(nil) }
+            Button(L("Выход", "Quit")) { NSApplication.shared.terminate(nil) }
                 .buttonStyle(.borderless).font(.caption).foregroundStyle(.secondary)
         }
     }
@@ -156,6 +159,7 @@ struct PopoverView: View {
 struct EventRow: View {
     let event: ClaudeEvent
     let store: EventStore
+    @ObservedObject private var lang = LangObserver.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
@@ -188,15 +192,15 @@ struct EventRow: View {
 
             if event.kind == .ask && !event.read {
                 HStack(spacing: 6) {
-                    Button("⏎ Разрешить") {
+                    Button(L("⏎ Разрешить", "⏎ Allow")) {
                         store.markRead(event.id)
                         SessionFocus.answer(event, allow: true)
                     }
-                    Button("⎋ Отклонить") {
+                    Button(L("⎋ Отклонить", "⎋ Deny")) {
                         store.markRead(event.id)
                         SessionFocus.answer(event, allow: false)
                     }
-                    Button("Открыть") {
+                    Button(L("Открыть", "Open")) {
                         store.markRead(event.id)
                         SessionFocus.focus(event)
                     }
@@ -221,6 +225,7 @@ struct EventRow: View {
 
 struct UsageBucketRow: View {
     let named: NamedBucket
+    @ObservedObject private var lang = LangObserver.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
@@ -232,7 +237,7 @@ struct UsageBucketRow: View {
             ProgressView(value: named.pct, total: 1.0)
                 .tint(colorForPct(named.pct))
             if let resetDate = named.bucket.resetsAtDate {
-                Text("Сброс \(resetDate, style: .relative)")
+                Text("\(L("Сброс", "Resets")) \(resetDate, style: .relative)")
                     .font(.caption2).foregroundStyle(.secondary)
             }
         }
@@ -270,7 +275,7 @@ private struct CodeEntryView: View {
     @State private var code = ""
 
     var body: some View {
-        Text("Вставьте код из браузера:")
+        Text(L("Вставьте код из браузера:", "Paste the code from your browser:"))
             .font(.subheadline).foregroundStyle(.secondary)
         HStack(spacing: 4) {
             TextField("code#state", text: $code)
@@ -287,10 +292,10 @@ private struct CodeEntryView: View {
             .buttonStyle(.borderless)
         }
         HStack {
-            Button("Отмена") { usage.isAwaitingCode = false }
+            Button(L("Отмена", "Cancel")) { usage.isAwaitingCode = false }
                 .buttonStyle(.borderless)
             Spacer()
-            Button("Готово") { submit() }
+            Button(L("Готово", "Submit")) { submit() }
                 .buttonStyle(.borderedProminent)
                 .disabled(code.isEmpty)
         }

@@ -80,7 +80,7 @@ final class AppModel: ObservableObject {
             server = newServer
             serverError = nil
         } catch {
-            serverError = "Не удалось открыть порт \(serverPort): \(error.localizedDescription)"
+            serverError = L("Не удалось открыть порт \(serverPort): ", "Failed to open port \(serverPort): ") + error.localizedDescription
         }
     }
 
@@ -98,7 +98,7 @@ final class AppModel: ObservableObject {
             hooksInstalled = HookInstaller.isFullyInstalled
         } catch {
             hooksInstalled = false
-            serverError = "Не удалось установить хуки: \(error.localizedDescription)"
+            serverError = L("Не удалось установить хуки: ", "Failed to install hooks: ") + error.localizedDescription
         }
     }
 

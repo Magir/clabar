@@ -23,9 +23,19 @@ struct UsageHistory: Codable {
 }
 
 enum TimeRange: String, CaseIterable, Identifiable {
-    case hour1 = "1ч", hour6 = "6ч", day1 = "1д", day7 = "7д", day30 = "30д"
+    case hour1, hour6, day1, day7, day30
 
     var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .hour1: return L("1ч", "1h")
+        case .hour6: return L("6ч", "6h")
+        case .day1: return L("1д", "1d")
+        case .day7: return L("7д", "7d")
+        case .day30: return L("30д", "30d")
+        }
+    }
 
     var interval: TimeInterval {
         switch self {

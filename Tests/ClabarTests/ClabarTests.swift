@@ -2,6 +2,45 @@ import XCTest
 @testable import Clabar
 
 final class UsageModelTests: XCTestCase {
+    override func setUp() {
+        UserDefaults.standard.set("ru", forKey: Lang.defaultsKey)
+    }
+
+    override func tearDown() {
+        UserDefaults.standard.removeObject(forKey: Lang.defaultsKey)
+    }
+
+    func testLimitsArrayDecoding() throws {
+        let json = """
+        {
+          "five_hour": {"utilization": 24.0, "resets_at": "2026-08-06T10:29:59.644959+00:00"},
+          "seven_day": {"utilization": 58.0, "resets_at": "2026-08-07T01:59:59.644986+00:00"},
+          "seven_day_opus": null,
+          "limits": [
+            {"kind": "session", "group": "session", "percent": 24, "severity": "normal",
+             "resets_at": "2026-08-06T10:29:59.644959+00:00", "scope": null, "is_active": false},
+            {"kind": "weekly_all", "group": "weekly", "percent": 58,
+             "resets_at": "2026-08-07T01:59:59.644986+00:00", "scope": null, "is_active": false},
+            {"kind": "weekly_scoped", "group": "weekly", "percent": 62,
+             "resets_at": "2026-08-07T01:59:59.645285+00:00",
+             "scope": {"model": {"id": null, "display_name": "Fable"}, "surface": null}, "is_active": true}
+          ],
+          "spend": {"percent": 0}
+        }
+        """
+        let response = try UsageResponse.decode(from: Data(json.utf8))
+
+        XCTAssertEqual(response.buckets.map(\.key), ["five_hour", "seven_day", "seven_day_fable"])
+        XCTAssertEqual(response.pct("five_hour"), 0.24, accuracy: 0.001)
+        XCTAssertEqual(response.pct("seven_day"), 0.58, accuracy: 0.001)
+
+        let fable = try XCTUnwrap(response.modelBucket("fable"))
+        XCTAssertEqual(fable.pct, 0.62, accuracy: 0.001)
+        XCTAssertEqual(fable.label, "Fable (неделя)")
+        XCTAssertEqual(fable.shortLabel, "Fa")
+        XCTAssertNotNil(fable.bucket.resetsAtDate)
+    }
+
     func testDynamicBucketDecodingIncludesFable() throws {
         let json = """
         {
@@ -96,6 +135,92 @@ final class HookInstallerTests: XCTestCase {
         let (again, changedAgain) = HookInstaller.mergedSettings(merged)
         XCTAssertFalse(changedAgain)
         XCTAssertEqual((again["hooks"] as? [String: Any])?.count, (merged["hooks"] as? [String: Any])?.count)
+    }
+}
+
+final class DevcontainerPatchTests: XCTestCase {
+    private var projectURL: URL!
+
+    override func setUpWithError() throws {
+        projectURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("clabar-devc-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: projectURL.appendingPathComponent(".devcontainer"), withIntermediateDirectories: true)
+    }
+
+    override func tearDown() {
+        try? FileManager.default.removeItem(at: projectURL)
+    }
+
+    private func writeDevcontainer(_ object: [String: Any]) throws -> URL {
+        let file = projectURL.appendingPathComponent(".devcontainer/devcontainer.json")
+        let data = try JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted])
+        try data.write(to: file)
+        return file
+    }
+
+    private func readDevcontainer(_ file: URL) throws -> [String: Any] {
+        try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: file)) as? [String: Any])
+    }
+
+    func testPatchPreservesObjectMounts() throws {
+        let file = try writeDevcontainer([
+            "image": "ubuntu",
+            "mounts": [["source": "/host/a", "target": "/a", "type": "bind"]],
+            "containerEnv": ["FOO": "1"],
+        ])
+        let result = try HookInstaller.patchDevcontainer(file: file, projectURL: projectURL)
+        XCTAssertEqual(result, .patched)
+
+        let root = try readDevcontainer(file)
+        let mounts = try XCTUnwrap(root["mounts"] as? [Any])
+        XCTAssertEqual(mounts.count, 2) // object mount survived, ours appended
+        XCTAssertNotNil(mounts.first as? [String: Any])
+        let env = try XCTUnwrap(root["containerEnv"] as? [String: Any])
+        XCTAssertEqual(env["FOO"] as? String, "1")
+        XCTAssertEqual(env["CLAUDE_CONFIG_DIR"] as? String, "/clabar/claude-config")
+        XCTAssertEqual(env["CLABAR_HOST"] as? String, "host.docker.internal")
+    }
+
+    func testExistingClaudeConfigDirRespectedAndHooksInstalledThere() throws {
+        let file = try writeDevcontainer([
+            "image": "ubuntu",
+            "workspaceFolder": "/workspaces/proj",
+            "containerEnv": ["CLAUDE_CONFIG_DIR": "/workspaces/proj/.claude-cfg"],
+        ])
+        let result = try HookInstaller.patchDevcontainer(file: file, projectURL: projectURL)
+
+        let expectedHost = projectURL.appendingPathComponent(".claude-cfg").path
+        XCTAssertEqual(result, .patchedExistingConfig(hooksInstalledAt: expectedHost))
+        XCTAssertTrue(FileManager.default.fileExists(
+            atPath: expectedHost + "/hooks/clabar-hook.sh"))
+        let settings = try XCTUnwrap(JSONSerialization.jsonObject(
+            with: Data(contentsOf: URL(fileURLWithPath: expectedHost + "/settings.json"))) as? [String: Any])
+        XCTAssertNotNil((settings["hooks"] as? [String: Any])?["Stop"])
+
+        let root = try readDevcontainer(file)
+        let env = try XCTUnwrap(root["containerEnv"] as? [String: Any])
+        XCTAssertEqual(env["CLAUDE_CONFIG_DIR"] as? String, "/workspaces/proj/.claude-cfg") // untouched
+        XCTAssertEqual(env["CLABAR_HOST"] as? String, "host.docker.internal")
+        XCTAssertNil(root["mounts"]) // no useless mount added
+    }
+
+    func testConfigDirResolvedViaStringMount() throws {
+        let file = try writeDevcontainer([
+            "image": "ubuntu",
+            "mounts": ["source=${localWorkspaceFolder}/cfg,target=/cfg,type=bind"],
+            "containerEnv": ["CLAUDE_CONFIG_DIR": "/cfg"],
+        ])
+        let result = try HookInstaller.patchDevcontainer(file: file, projectURL: projectURL)
+        XCTAssertEqual(result, .patchedExistingConfig(
+            hooksInstalledAt: projectURL.appendingPathComponent("cfg").path))
+    }
+
+    func testJSONCFallsBackToSnippet() throws {
+        let file = projectURL.appendingPathComponent(".devcontainer/devcontainer.json")
+        try "// comment\n{\"image\": \"ubuntu\"}".write(to: file, atomically: true, encoding: .utf8)
+        let result = try HookInstaller.patchDevcontainer(file: file, projectURL: projectURL)
+        XCTAssertEqual(result, .needsManualEdit(snippet: HookInstaller.devcontainerSnippet))
     }
 }
 

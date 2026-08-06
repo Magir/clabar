@@ -24,11 +24,15 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         let center = UNUserNotificationCenter.current()
         center.delegate = self
         center.requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
+        updateCategories()
+    }
 
-        let open = UNNotificationAction(identifier: "open", title: "Открыть", options: [.foreground])
-        let allow = UNNotificationAction(identifier: "allow", title: "⏎ Разрешить", options: [.foreground])
-        let deny = UNNotificationAction(identifier: "deny", title: "⎋ Отклонить", options: [.foreground])
-        center.setNotificationCategories([
+    /// Re-registered on every post so action titles follow language switches.
+    private func updateCategories() {
+        let open = UNNotificationAction(identifier: "open", title: L("Открыть", "Open"), options: [.foreground])
+        let allow = UNNotificationAction(identifier: "allow", title: L("⏎ Разрешить", "⏎ Allow"), options: [.foreground])
+        let deny = UNNotificationAction(identifier: "deny", title: L("⎋ Отклонить", "⎋ Deny"), options: [.foreground])
+        UNUserNotificationCenter.current().setNotificationCategories([
             UNNotificationCategory(identifier: "clabar.ask", actions: [allow, deny, open], intentIdentifiers: []),
             UNNotificationCategory(identifier: "clabar.other", actions: [open], intentIdentifiers: []),
         ])
@@ -36,6 +40,7 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
 
     func post(for event: ClaudeEvent) {
         guard available, bannersEnabled(for: event.kind) else { return }
+        updateCategories()
 
         if event.kind == .error {
             let sessionKey = event.sessionId ?? "?"

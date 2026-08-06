@@ -3,6 +3,7 @@ import SwiftUI
 @main
 struct ClabarApp: App {
     @StateObject private var model = AppModel.shared
+    @StateObject private var lang = LangObserver.shared
 
     var body: some Scene {
         MenuBarExtra {
@@ -13,7 +14,7 @@ struct ClabarApp: App {
         }
         .menuBarExtraStyle(.window)
 
-        Window("История уведомлений", id: "log") {
+        Window(L("История уведомлений", "Notification History"), id: "log") {
             LogWindowView(model: model)
         }
         .defaultSize(width: 820, height: 480)
@@ -21,7 +22,7 @@ struct ClabarApp: App {
         // A plain Window instead of the Settings scene: LSUIElement apps have no
         // menu bar entry anyway, and Settings silently no-ops when the app is
         // inactive (popover click) — a Window opened via presentFront is reliable.
-        Window("Настройки Clabar", id: "settings") {
+        Window(L("Настройки Clabar", "Clabar Settings"), id: "settings") {
             SettingsView(model: model)
         }
         .windowResizability(.contentSize)

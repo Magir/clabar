@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 struct SettingsView: View {
     @ObservedObject var model: AppModel
     @ObservedObject var usage: UsageService
+    @ObservedObject private var lang = LangObserver.shared
 
     @AppStorage(SettingsKeys.iconShowBars) private var showBars = true
     @AppStorage(SettingsKeys.iconShowUnread) private var showUnread = true
@@ -31,94 +32,109 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            Section("Иконка в меню-баре") {
-                Toggle("Мини-полоски использования", isOn: $showBars)
-                Toggle("Счётчик непрочитанных уведомлений", isOn: $showUnread)
-                Text("Проценты текстом:")
-                Toggle("5 часов", isOn: $pct5h)
-                Toggle("Неделя", isOn: $pct7d)
-                Toggle("Fable (и полоска в иконке)", isOn: $pctFable)
+            Section(L("Язык / Language", "Language / Язык")) {
+                Picker(L("Язык интерфейса", "Interface language"), selection: $lang.language) {
+                    Text(L("Авто (как в системе)", "Auto (system)")).tag(AppLanguage.auto)
+                    Text("Русский").tag(AppLanguage.ru)
+                    Text("English").tag(AppLanguage.en)
+                }
             }
 
-            Section("Уведомления") {
-                Toggle("Звук для запросов", isOn: $sound)
-                Toggle("Баннеры: запросы", isOn: $bannersAsk)
-                Toggle("Баннеры: завершение работы", isOn: $bannersDone)
-                Toggle("Баннеры: сбои", isOn: $bannersError)
-                Toggle("Баннеры: прочее", isOn: $bannersInfo)
-                Toggle("Отвечать на запросы клавишами (⏎/⎋, экспериментально)", isOn: $sendKeystrokes)
+            Section(L("Иконка в меню-баре", "Menu bar icon")) {
+                Toggle(L("Мини-полоски использования", "Mini usage bars"), isOn: $showBars)
+                Toggle(L("Счётчик непрочитанных уведомлений", "Unread notifications counter"), isOn: $showUnread)
+                Text(L("Проценты текстом:", "Percentages as text:"))
+                Toggle(L("5 часов", "5-hour"), isOn: $pct5h)
+                Toggle(L("Неделя", "Weekly"), isOn: $pct7d)
+                Toggle(L("Fable (и полоска в иконке)", "Fable (adds an icon bar too)"), isOn: $pctFable)
+            }
+
+            Section(L("Уведомления", "Notifications")) {
+                Toggle(L("Звук для запросов", "Sound for asks"), isOn: $sound)
+                Toggle(L("Баннеры: запросы", "Banners: asks"), isOn: $bannersAsk)
+                Toggle(L("Баннеры: завершение работы", "Banners: task completion"), isOn: $bannersDone)
+                Toggle(L("Баннеры: сбои", "Banners: failures"), isOn: $bannersError)
+                Toggle(L("Баннеры: прочее", "Banners: other"), isOn: $bannersInfo)
+                Toggle(L("Отвечать на запросы клавишами (⏎/⎋, экспериментально)",
+                         "Answer prompts with keystrokes (⏎/⎋, experimental)"), isOn: $sendKeystrokes)
                 if sendKeystrokes {
-                    Text("Нажатие уйдёт в активное окно после фокусировки сессии. Нужно разрешение «Универсальный доступ» (Accessibility) для Clabar.")
+                    Text(L("Нажатие уйдёт в активное окно после фокусировки сессии. Нужно разрешение «Универсальный доступ» (Accessibility) для Clabar.",
+                           "The keystroke goes to the active window after focusing the session. Clabar needs the Accessibility permission."))
                         .font(.caption).foregroundStyle(.orange)
                 }
             }
 
-            Section("Напоминание «сожги лимит»") {
-                Toggle("Подсвечивать, когда лимит пропадает", isOn: $nudgeEnabled)
+            Section(L("Напоминание «сожги лимит»", "“Burn the limit” reminder")) {
+                Toggle(L("Подсвечивать, когда лимит пропадает", "Highlight when limit is about to expire unused"), isOn: $nudgeEnabled)
                 if nudgeEnabled {
-                    Stepper("Если использовано меньше \(nudgeThreshold)%", value: $nudgeThreshold, in: 5...95, step: 5)
-                    Stepper("и до сброса меньше \(nudgeWindow) ч", value: $nudgeWindow, in: 3...48, step: 3)
+                    Stepper(L("Если использовано меньше \(nudgeThreshold)%", "If less than \(nudgeThreshold)% used"),
+                            value: $nudgeThreshold, in: 5...95, step: 5)
+                    Stepper(L("и до сброса меньше \(nudgeWindow) ч", "and reset is under \(nudgeWindow) h away"),
+                            value: $nudgeWindow, in: 3...48, step: 3)
                 }
             }
 
-            Section("Интеграция с Claude Code") {
-                LabeledContent("Хуки") {
+            Section(L("Интеграция с Claude Code", "Claude Code integration")) {
+                LabeledContent(L("Хуки", "Hooks")) {
                     HStack {
                         Image(systemName: model.hooksInstalled ? "checkmark.circle.fill" : "xmark.circle.fill")
                             .foregroundStyle(model.hooksInstalled ? .green : .red)
-                        Text(model.hooksInstalled ? "установлены" : "не установлены")
-                        Button(model.hooksInstalled ? "Переустановить" : "Установить") {
+                        Text(model.hooksInstalled ? L("установлены", "installed") : L("не установлены", "not installed"))
+                        Button(model.hooksInstalled ? L("Переустановить", "Reinstall") : L("Установить", "Install")) {
                             model.installHooks()
                         }
                     }
                 }
-                Text("Скрипт: ~/.claude/hooks/clabar-hook.sh, регистрация в ~/.claude/settings.json (бэкап: settings.json.clabar-backup).")
+                Text(L("Скрипт: ~/.claude/hooks/clabar-hook.sh, регистрация в ~/.claude/settings.json (бэкап: settings.json.clabar-backup).",
+                       "Script: ~/.claude/hooks/clabar-hook.sh, registered in ~/.claude/settings.json (backup: settings.json.clabar-backup)."))
                     .font(.caption).foregroundStyle(.secondary)
 
-                LabeledContent("Порт") {
+                LabeledContent(L("Порт", "Port")) {
                     HStack {
                         TextField("", value: $serverPort, format: .number.grouping(.never))
                             .frame(width: 70)
-                        Button("Применить") { model.applyPort() }
+                        Button(L("Применить", "Apply")) { model.applyPort() }
                     }
                 }
 
                 LabeledContent("DevContainer") {
                     VStack(alignment: .trailing, spacing: 4) {
                         HStack {
-                            Button("Настроить проект…") { pickDevcontainerProject() }
-                            Button("Показать сниппет") { showSnippet = true }
+                            Button(L("Настроить проект…", "Set up a project…")) { pickDevcontainerProject() }
+                            Button(L("Показать сниппет", "Show snippet")) { showSnippet = true }
                         }
                         if let devcontainerMessage {
-                            Text(devcontainerMessage).font(.caption).foregroundStyle(.secondary)
+                            Text(devcontainerMessage)
+                                .font(.caption).foregroundStyle(.secondary)
+                                .frame(maxWidth: 260, alignment: .trailing)
                         }
                     }
                 }
             }
 
-            Section("Аккаунт") {
-                LabeledContent("Пользователь", value: usage.accountEmail ?? "—")
-                Picker("Опрос лимитов", selection: Binding(
+            Section(L("Аккаунт", "Account")) {
+                LabeledContent(L("Пользователь", "User"), value: usage.accountEmail ?? "—")
+                Picker(L("Опрос лимитов", "Usage polling"), selection: Binding(
                     get: { usage.pollingMinutes },
                     set: { usage.updatePollingInterval($0) }
                 )) {
                     ForEach(UsageService.pollingOptions, id: \.self) { minutes in
-                        Text("\(minutes) мин").tag(minutes)
+                        Text(L("\(minutes) мин", "\(minutes) min")).tag(minutes)
                     }
                 }
                 if usage.isAuthenticated {
-                    Button("Выйти из аккаунта", role: .destructive) { usage.signOut() }
+                    Button(L("Выйти из аккаунта", "Sign out"), role: .destructive) { usage.signOut() }
                 }
             }
         }
         .formStyle(.grouped)
-        .frame(width: 460, height: 640)
+        .frame(width: 460, height: 660)
         .sheet(isPresented: $showSnippet) { snippetSheet }
     }
 
     private var snippetSheet: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Добавьте в devcontainer.json:").font(.headline)
+            Text(L("Добавьте в devcontainer.json:", "Add to devcontainer.json:")).font(.headline)
             ScrollView(.horizontal) {
                 Text(HookInstaller.devcontainerSnippet)
                     .font(.system(.caption, design: .monospaced))
@@ -126,15 +142,16 @@ struct SettingsView: View {
                     .padding(8)
             }
             .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 6))
-            Text("Монтирует ~/.claude в контейнер (настройки, хуки и логин Claude едут туда и обратно) и направляет уведомления на хост через host.docker.internal.")
+            Text(L("Монтирует ~/.claude в контейнер (настройки, хуки и логин Claude едут туда и обратно) и направляет уведомления на хост через host.docker.internal.",
+                   "Mounts ~/.claude into the container (Claude settings, hooks and login travel both ways) and routes notifications to the host via host.docker.internal."))
                 .font(.caption).foregroundStyle(.secondary)
             HStack {
-                Button("Скопировать") {
+                Button(L("Скопировать", "Copy")) {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(HookInstaller.devcontainerSnippet, forType: .string)
                 }
                 Spacer()
-                Button("Закрыть") { showSnippet = false }
+                Button(L("Закрыть", "Close")) { showSnippet = false }
             }
         }
         .padding(16)
@@ -146,31 +163,48 @@ struct SettingsView: View {
         panel.canChooseDirectories = true
         panel.canChooseFiles = true
         panel.allowedContentTypes = [.json, .folder]
-        panel.message = "Выберите папку проекта или сам devcontainer.json"
+        panel.message = L("Выберите папку проекта или сам devcontainer.json",
+                          "Pick the project folder or the devcontainer.json itself")
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
         let file: URL?
+        let projectURL: URL
         if url.hasDirectoryPath {
+            projectURL = url
             file = HookInstaller.devcontainerFile(inProject: url)
         } else {
             file = url
+            var dir = url.deletingLastPathComponent()
+            if dir.lastPathComponent == ".devcontainer" { dir.deleteLastPathComponent() }
+            projectURL = dir
         }
         guard let file else {
-            devcontainerMessage = "devcontainer.json не найден в проекте"
+            devcontainerMessage = L("devcontainer.json не найден в проекте", "No devcontainer.json found in the project")
             return
         }
         do {
-            switch try HookInstaller.patchDevcontainer(file: file) {
+            let port = UInt16(clamping: serverPort)
+            switch try HookInstaller.patchDevcontainer(file: file, projectURL: projectURL, port: port) {
             case .patched:
-                devcontainerMessage = "Готово: \(file.lastPathComponent) обновлён (бэкап рядом). Пересоберите контейнер."
+                devcontainerMessage = L("Готово: \(file.lastPathComponent) обновлён (бэкап рядом). Пересоберите контейнер.",
+                                        "Done: \(file.lastPathComponent) updated (backup next to it). Rebuild the container.")
             case .alreadyPatched:
-                devcontainerMessage = "Уже настроено."
+                devcontainerMessage = L("Уже настроено.", "Already set up.")
+            case .patchedExistingConfig(let hooksInstalledAt):
+                if let hooksInstalledAt {
+                    devcontainerMessage = L("У проекта свой CLAUDE_CONFIG_DIR — оставлен как есть, хуки Clabar установлены в \(hooksInstalledAt). Пересоберите контейнер.",
+                                            "Project has its own CLAUDE_CONFIG_DIR — kept as is; Clabar hooks installed into \(hooksInstalledAt). Rebuild the container.")
+                } else {
+                    devcontainerMessage = L("У проекта свой CLAUDE_CONFIG_DIR, но его хостовый путь не разрешился. Добавлен только CLABAR_HOST; поставьте хуки в тот конфиг кнопкой «Установить», указав его через CLAUDE_CONFIG_DIR, или вручную.",
+                                            "Project has its own CLAUDE_CONFIG_DIR but its host path couldn't be resolved. Only CLABAR_HOST was added; install hooks into that config manually.")
+                }
             case .needsManualEdit:
-                devcontainerMessage = "В файле комментарии — вставьте сниппет вручную."
+                devcontainerMessage = L("В файле комментарии — вставьте сниппет вручную.",
+                                        "The file has comments — paste the snippet manually.")
                 showSnippet = true
             }
         } catch {
-            devcontainerMessage = "Ошибка: \(error.localizedDescription)"
+            devcontainerMessage = L("Ошибка: ", "Error: ") + error.localizedDescription
         }
     }
 }

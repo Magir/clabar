@@ -16,9 +16,16 @@ enum HookInstaller {
         ("SessionEnd", ""),
     ]
 
-    static var hooksDir: URL { ClabarPaths.claudeDir.appendingPathComponent("hooks", isDirectory: true) }
-    static var scriptURL: URL { hooksDir.appendingPathComponent("clabar-hook.sh") }
-    static var settingsURL: URL { ClabarPaths.claudeDir.appendingPathComponent("settings.json") }
+    static var scriptURL: URL { scriptURL(in: ClabarPaths.claudeDir) }
+    static var settingsURL: URL { settingsURL(in: ClabarPaths.claudeDir) }
+
+    static func scriptURL(in claudeDir: URL) -> URL {
+        claudeDir.appendingPathComponent("hooks/clabar-hook.sh")
+    }
+
+    static func settingsURL(in claudeDir: URL) -> URL {
+        claudeDir.appendingPathComponent("settings.json")
+    }
 
     /// Works both on the host and inside a devcontainer (CLAUDE_CONFIG_DIR).
     static let hookCommand = #"sh "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hooks/clabar-hook.sh""#
@@ -43,41 +50,45 @@ enum HookInstaller {
     // MARK: - Install
 
     @discardableResult
-    static func install(port: UInt16 = defaultPort) throws -> Bool {
-        var changed = try writeScript(port: port)
+    static func install(port: UInt16 = defaultPort, into claudeDir: URL = ClabarPaths.claudeDir) throws -> Bool {
+        var changed = try writeScript(port: port, claudeDir: claudeDir)
 
-        let root = readSettings()
+        let settingsFile = settingsURL(in: claudeDir)
+        let root = readSettings(at: settingsFile)
         let (merged, settingsChanged) = mergedSettings(root)
         if settingsChanged {
-            if FileManager.default.fileExists(atPath: settingsURL.path) {
-                let backup = settingsURL.appendingPathExtension("clabar-backup")
+            if FileManager.default.fileExists(atPath: settingsFile.path) {
+                let backup = settingsFile.appendingPathExtension("clabar-backup")
                 if !FileManager.default.fileExists(atPath: backup.path) {
-                    try? FileManager.default.copyItem(at: settingsURL, to: backup)
+                    try? FileManager.default.copyItem(at: settingsFile, to: backup)
                 }
             }
             let data = try JSONSerialization.data(
                 withJSONObject: merged,
                 options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
             )
-            try data.write(to: settingsURL, options: .atomic)
+            try data.write(to: settingsFile, options: .atomic)
             changed = true
         }
         return changed
     }
 
-    private static func writeScript(port: UInt16) throws -> Bool {
+    private static func writeScript(port: UInt16, claudeDir: URL) throws -> Bool {
+        let file = scriptURL(in: claudeDir)
         let content = scriptContent(port: port)
-        if let existing = try? String(contentsOf: scriptURL, encoding: .utf8), existing == content {
+        if let existing = try? String(contentsOf: file, encoding: .utf8), existing == content {
             return false
         }
-        try FileManager.default.createDirectory(at: hooksDir, withIntermediateDirectories: true)
-        try content.write(to: scriptURL, atomically: true, encoding: .utf8)
-        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: scriptURL.path)
+        try FileManager.default.createDirectory(
+            at: file.deletingLastPathComponent(), withIntermediateDirectories: true
+        )
+        try content.write(to: file, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: file.path)
         return true
     }
 
-    private static func readSettings() -> [String: Any] {
-        guard let data = try? Data(contentsOf: settingsURL),
+    private static func readSettings(at url: URL) -> [String: Any] {
+        guard let data = try? Data(contentsOf: url),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             return [:]
         }
@@ -117,7 +128,7 @@ enum HookInstaller {
 
     /// Which of our subscriptions are currently registered.
     static func installedEvents() -> Set<String> {
-        let root = readSettings()
+        let root = readSettings(at: settingsURL)
         let hooks = root["hooks"] as? [String: Any] ?? [:]
         var result = Set<String>()
         for subscription in subscriptions {
@@ -139,11 +150,8 @@ enum HookInstaller {
 
     // MARK: - DevContainer
 
-    static let devcontainerMount = "source=${localEnv:HOME}/.claude,target=/clabar/claude-config,type=bind"
-    static let devcontainerEnv: [String: String] = [
-        "CLAUDE_CONFIG_DIR": "/clabar/claude-config",
-        "CLABAR_HOST": "host.docker.internal",
-    ]
+    static let devcontainerConfigTarget = "/clabar/claude-config"
+    static let devcontainerMount = "source=${localEnv:HOME}/.claude,target=\(devcontainerConfigTarget),type=bind"
 
     /// Manual snippet for JSONC files we refuse to rewrite.
     static var devcontainerSnippet: String {
@@ -152,15 +160,19 @@ enum HookInstaller {
           "\(devcontainerMount)"
         ],
         "containerEnv": {
-          "CLAUDE_CONFIG_DIR": "/clabar/claude-config",
+          "CLAUDE_CONFIG_DIR": "\(devcontainerConfigTarget)",
           "CLABAR_HOST": "host.docker.internal"
         }
         """
     }
 
-    enum DevcontainerPatchResult {
+    enum DevcontainerPatchResult: Equatable {
         case patched
         case alreadyPatched
+        /// The project already points Claude at its own config dir
+        /// (CLAUDE_CONFIG_DIR). We keep it, only add CLABAR_HOST, and install
+        /// our hooks into that dir when its host path is resolvable.
+        case patchedExistingConfig(hooksInstalledAt: String?)
         /// File has comments or non-standard JSON — rewriting would destroy it.
         case needsManualEdit(snippet: String)
     }
@@ -173,7 +185,7 @@ enum HookInstaller {
         return candidates.first { FileManager.default.fileExists(atPath: $0.path) }
     }
 
-    static func patchDevcontainer(file: URL) throws -> DevcontainerPatchResult {
+    static func patchDevcontainer(file: URL, projectURL: URL, port: UInt16 = defaultPort) throws -> DevcontainerPatchResult {
         let raw = try String(contentsOf: file, encoding: .utf8)
         // JSONC is common in devcontainer.json; JSONSerialization can't
         // round-trip comments, so bail out to a manual snippet.
@@ -184,32 +196,87 @@ enum HookInstaller {
 
         var root = json
         var changed = false
-
-        var mounts = root["mounts"] as? [String] ?? []
-        if !mounts.contains(where: { $0.contains("/clabar/claude-config") }) {
-            mounts.append(devcontainerMount)
-            root["mounts"] = mounts
-            changed = true
-        }
-
         var env = root["containerEnv"] as? [String: Any] ?? [:]
-        for (key, value) in devcontainerEnv where env[key] == nil {
-            env[key] = value
+        let remoteEnv = root["remoteEnv"] as? [String: Any] ?? [:]
+        let customConfigDir = (env["CLAUDE_CONFIG_DIR"] ?? remoteEnv["CLAUDE_CONFIG_DIR"]) as? String
+
+        if customConfigDir == nil {
+            // Mount entries may be strings or objects — preserve them as-is.
+            var mounts = root["mounts"] as? [Any] ?? []
+            if !mounts.contains(where: { ($0 as? String)?.contains(devcontainerConfigTarget) == true }) {
+                mounts.append(devcontainerMount)
+                root["mounts"] = mounts
+                changed = true
+            }
+            if env["CLAUDE_CONFIG_DIR"] == nil {
+                env["CLAUDE_CONFIG_DIR"] = devcontainerConfigTarget
+                changed = true
+            }
+        }
+        if env["CLABAR_HOST"] == nil {
+            env["CLABAR_HOST"] = "host.docker.internal"
             changed = true
         }
         root["containerEnv"] = env
 
-        guard changed else { return .alreadyPatched }
-
-        let backup = file.appendingPathExtension("clabar-backup")
-        if !FileManager.default.fileExists(atPath: backup.path) {
-            try? FileManager.default.copyItem(at: file, to: backup)
+        if changed {
+            let backup = file.appendingPathExtension("clabar-backup")
+            if !FileManager.default.fileExists(atPath: backup.path) {
+                try? FileManager.default.copyItem(at: file, to: backup)
+            }
+            let data = try JSONSerialization.data(
+                withJSONObject: root,
+                options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+            )
+            try data.write(to: file, options: .atomic)
         }
-        let data = try JSONSerialization.data(
-            withJSONObject: root,
-            options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
-        )
-        try data.write(to: file, options: .atomic)
-        return .patched
+
+        if let customConfigDir {
+            var installedAt: String?
+            if let hostDir = resolveHostPath(containerPath: customConfigDir, root: root, projectURL: projectURL) {
+                try install(port: port, into: hostDir)
+                installedAt = hostDir.path
+            }
+            return .patchedExistingConfig(hooksInstalledAt: installedAt)
+        }
+        return changed ? .patched : .alreadyPatched
+    }
+
+    /// Best-effort mapping of a container path back to the host: workspace
+    /// folder conventions plus declared bind mounts (string or object form).
+    static func resolveHostPath(containerPath: String, root: [String: Any], projectURL: URL) -> URL? {
+        for entry in root["mounts"] as? [Any] ?? [] {
+            var source: String?
+            var target: String?
+            if let text = entry as? String {
+                for pair in text.split(separator: ",") {
+                    let kv = pair.split(separator: "=", maxSplits: 1).map(String.init)
+                    guard kv.count == 2 else { continue }
+                    if kv[0] == "source" || kv[0] == "src" { source = kv[1] }
+                    if kv[0] == "target" || kv[0] == "dst" { target = kv[1] }
+                }
+            } else if let object = entry as? [String: Any] {
+                source = object["source"] as? String
+                target = object["target"] as? String
+            }
+            guard var source, let target,
+                  containerPath == target || containerPath.hasPrefix(target + "/") else { continue }
+            source = expandLocalVars(source, projectURL: projectURL)
+            guard !source.contains("${") else { continue }
+            return URL(fileURLWithPath: source + containerPath.dropFirst(target.count))
+        }
+
+        let workspaceFolder = (root["workspaceFolder"] as? String)
+            ?? "/workspaces/\(projectURL.lastPathComponent)"
+        if containerPath == workspaceFolder || containerPath.hasPrefix(workspaceFolder + "/") {
+            return URL(fileURLWithPath: projectURL.path + containerPath.dropFirst(workspaceFolder.count))
+        }
+        return nil
+    }
+
+    private static func expandLocalVars(_ value: String, projectURL: URL) -> String {
+        value
+            .replacingOccurrences(of: "${localEnv:HOME}", with: FileManager.default.homeDirectoryForCurrentUser.path)
+            .replacingOccurrences(of: "${localWorkspaceFolder}", with: projectURL.path)
     }
 }

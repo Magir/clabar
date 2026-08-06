@@ -3,6 +3,7 @@ import SwiftUI
 struct LogWindowView: View {
     @ObservedObject var model: AppModel
     @ObservedObject var store: EventStore
+    @ObservedObject private var lang = LangObserver.shared
 
     @State private var searchText = ""
     @State private var kindFilter: EventKind?
@@ -45,29 +46,29 @@ struct LogWindowView: View {
 
     private var filterBar: some View {
         HStack(spacing: 10) {
-            Picker("Тип", selection: $kindFilter) {
-                Text("Все").tag(EventKind?.none)
+            Picker(L("Тип", "Type"), selection: $kindFilter) {
+                Text(L("Все", "All")).tag(EventKind?.none)
                 ForEach(EventKind.allCases) { kind in
                     Text("\(kind.emoji) \(kind.title)").tag(EventKind?.some(kind))
                 }
             }
             .frame(maxWidth: 160)
 
-            Toggle("Непрочитанные", isOn: $unreadOnly)
+            Toggle(L("Непрочитанные", "Unread"), isOn: $unreadOnly)
                 .toggleStyle(.checkbox)
 
-            TextField("Поиск по сообщению, проекту, источнику…", text: $searchText)
+            TextField(L("Поиск по сообщению, проекту, источнику…", "Search message, project, source…"), text: $searchText)
                 .textFieldStyle(.roundedBorder)
                 .frame(maxWidth: 320)
 
             Spacer()
 
-            Text("\(filtered.count) из \(store.events.count)")
+            Text("\(filtered.count) \(L("из", "of")) \(store.events.count)")
                 .font(.caption).foregroundStyle(.secondary)
 
-            Button("Прочитать все") { store.markAllRead() }
+            Button(L("Прочитать все", "Mark all read")) { store.markAllRead() }
                 .disabled(store.unreadCount == 0)
-            Button("Очистить журнал", role: .destructive) { store.clear() }
+            Button(L("Очистить журнал", "Clear log"), role: .destructive) { store.clear() }
                 .disabled(store.events.isEmpty)
         }
         .padding(10)
@@ -75,29 +76,29 @@ struct LogWindowView: View {
 
     private var table: some View {
         Table(filtered, selection: $selection, sortOrder: $sortOrder) {
-            TableColumn("Время", value: \.date) { event in
+            TableColumn(L("Время", "Time"), value: \.date) { event in
                 Text(event.date, format: .dateTime.day().month(.abbreviated).hour().minute().second())
                     .foregroundStyle(event.read ? .secondary : .primary)
             }
             .width(min: 130, ideal: 140)
 
-            TableColumn("Тип", value: \.kind.rawValue) { event in
+            TableColumn(L("Тип", "Type"), value: \.kind.rawValue) { event in
                 Label(event.kind.title, systemImage: event.kind.symbol)
                     .foregroundStyle(kindColor(event.kind))
             }
             .width(min: 80, ideal: 90)
 
-            TableColumn("Проект", value: \.project) { event in
+            TableColumn(L("Проект", "Project"), value: \.project) { event in
                 Text(event.project)
             }
             .width(min: 100, ideal: 130)
 
-            TableColumn("Источник", value: \.sourceName) { event in
+            TableColumn(L("Источник", "Source"), value: \.sourceName) { event in
                 Text(event.sourceName)
             }
             .width(min: 90, ideal: 110)
 
-            TableColumn("Сообщение", value: \.message) { event in
+            TableColumn(L("Сообщение", "Message"), value: \.message) { event in
                 Text(event.message)
                     .lineLimit(2)
                     .fontWeight(event.read ? .regular : .semibold)
@@ -105,8 +106,8 @@ struct LogWindowView: View {
             }
         }
         .contextMenu(forSelectionType: ClaudeEvent.ID.self) { ids in
-            Button("Открыть сессию") { focus(ids) }
-            Button("Отметить прочитанным") {
+            Button(L("Открыть сессию", "Open session")) { focus(ids) }
+            Button(L("Отметить прочитанным", "Mark as read")) {
                 for id in ids { store.markRead(id) }
             }
         } primaryAction: { ids in

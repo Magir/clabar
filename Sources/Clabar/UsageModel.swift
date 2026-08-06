@@ -61,18 +61,23 @@ struct UsageBucket: Codable, Equatable {
 struct NamedBucket: Identifiable, Equatable {
     let key: String
     let bucket: UsageBucket
+    /// Model display name from the API (e.g. "Fable"), when known.
+    var displayName: String? = nil
 
     var id: String { key }
 
+    private var derivedName: String {
+        let name = key.hasPrefix("seven_day_") ? String(key.dropFirst("seven_day_".count)) : key
+        return name.split(separator: "_").map(\.capitalized).joined(separator: " ")
+    }
+
     var label: String {
         switch key {
-        case "five_hour": return "5 часов"
-        case "seven_day": return "Неделя"
+        case "five_hour": return L("5 часов", "5-hour")
+        case "seven_day": return L("Неделя", "Weekly")
         default:
-            let isWeekly = key.hasPrefix("seven_day_")
-            let name = isWeekly ? String(key.dropFirst("seven_day_".count)) : key
-            let pretty = name.split(separator: "_").map(\.capitalized).joined(separator: " ")
-            return isWeekly ? "\(pretty) (неделя)" : pretty
+            let pretty = displayName ?? derivedName
+            return key.hasPrefix("seven_day_") ? "\(pretty) \(L("(неделя)", "(weekly)"))" : pretty
         }
     }
 
@@ -80,9 +85,7 @@ struct NamedBucket: Identifiable, Equatable {
         switch key {
         case "five_hour": return "5h"
         case "seven_day": return "7d"
-        default:
-            let name = key.hasPrefix("seven_day_") ? String(key.dropFirst("seven_day_".count)) : key
-            return String(name.prefix(2)).capitalized
+        default: return String((displayName ?? derivedName).prefix(2)).capitalized
         }
     }
 
@@ -117,7 +120,8 @@ struct UsageResponse: Equatable {
                         with: previous?.bucket(named.key)?.bucket,
                         resetInterval: named.resetInterval,
                         now: now
-                    )
+                    ),
+                    displayName: named.displayName
                 )
             },
             extraUsage: extraUsage
@@ -129,10 +133,59 @@ struct UsageResponse: Equatable {
             throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "Usage response is not an object"))
         }
 
+        var buckets = Self.bucketsFromLimits(json["limits"] as? [[String: Any]] ?? [])
+        if buckets.isEmpty {
+            buckets = Self.bucketsFromLegacyFields(json)
+        }
+        buckets.sort { Self.order($0.key) < Self.order($1.key) }
+
+        var extra: ExtraUsage?
+        if let extraObject = json["extra_usage"] as? [String: Any],
+           let extraData = try? JSONSerialization.data(withJSONObject: extraObject) {
+            extra = try? JSONDecoder().decode(ExtraUsage.self, from: extraData)
+        }
+
+        return UsageResponse(buckets: buckets, extraUsage: extra)
+    }
+
+    /// Modern format: the `limits` array — kind session/weekly_all/weekly_scoped,
+    /// per-model limits (Fable etc.) carry scope.model.display_name.
+    private static func bucketsFromLimits(_ limits: [[String: Any]]) -> [NamedBucket] {
+        var buckets: [NamedBucket] = []
+        for limit in limits {
+            guard let kind = limit["kind"] as? String else { continue }
+            let percent = (limit["percent"] as? NSNumber)?.doubleValue
+            let resetsAt = limit["resets_at"] as? String
+            let modelName = (((limit["scope"] as? [String: Any])?["model"]) as? [String: Any])?["display_name"] as? String
+
+            let key: String
+            switch kind {
+            case "session":
+                key = "five_hour"
+            case "weekly_all":
+                key = "seven_day"
+            case "weekly_scoped":
+                let slug = (modelName ?? "scoped").lowercased().replacingOccurrences(of: " ", with: "_")
+                key = "seven_day_\(slug)"
+            default:
+                key = kind
+            }
+            guard !buckets.contains(where: { $0.key == key }) else { continue }
+            buckets.append(NamedBucket(
+                key: key,
+                bucket: UsageBucket(utilization: percent, resetsAt: resetsAt),
+                displayName: modelName
+            ))
+        }
+        return buckets
+    }
+
+    /// Older format: top-level objects with a utilization field.
+    private static func bucketsFromLegacyFields(_ json: [String: Any]) -> [NamedBucket] {
         let decoder = JSONDecoder()
         var buckets: [NamedBucket] = []
         for (key, value) in json {
-            guard key != "extra_usage",
+            guard key != "extra_usage", key != "spend",
                   let object = value as? [String: Any],
                   object["utilization"] != nil || object["resets_at"] != nil,
                   let objectData = try? JSONSerialization.data(withJSONObject: object),
@@ -141,15 +194,7 @@ struct UsageResponse: Equatable {
             }
             buckets.append(NamedBucket(key: key, bucket: bucket))
         }
-        buckets.sort { Self.order($0.key) < Self.order($1.key) }
-
-        var extra: ExtraUsage?
-        if let extraObject = json["extra_usage"] as? [String: Any],
-           let extraData = try? JSONSerialization.data(withJSONObject: extraObject) {
-            extra = try? decoder.decode(ExtraUsage.self, from: extraData)
-        }
-
-        return UsageResponse(buckets: buckets, extraUsage: extra)
+        return buckets
     }
 
     private static func order(_ key: String) -> String {

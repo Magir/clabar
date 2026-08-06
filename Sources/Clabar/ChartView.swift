@@ -30,7 +30,7 @@ struct UsageChartView: View {
         VStack(alignment: .leading, spacing: 8) {
             Picker("", selection: $selectedRange) {
                 ForEach(TimeRange.allCases) { range in
-                    Text(range.rawValue).tag(range)
+                    Text(range.title).tag(range)
                 }
             }
             .pickerStyle(.segmented)
@@ -38,7 +38,7 @@ struct UsageChartView: View {
 
             let points = historyService.downsampledPoints(for: selectedRange)
             if points.isEmpty {
-                Text("Пока нет истории.")
+                Text(L("Пока нет истории.", "No history yet."))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, minHeight: 100, alignment: .center)
