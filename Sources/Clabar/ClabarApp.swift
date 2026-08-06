@@ -31,10 +31,17 @@ struct ClabarApp: App {
 
 /// Open a window from the menu bar popover and bring it to front: open first
 /// (while the popover still holds activation), then activate the app so the
-/// new window lands on top instead of behind other apps.
+/// new window lands on top instead of behind other apps. The popover itself
+/// (the key window at click time) is closed — unless the click somehow came
+/// from one of our real windows.
 @MainActor
 func presentFront(_ open: () -> Void) {
+    let clickSource = NSApp.keyWindow
     open()
+    let isRealWindow = ["settings", "log"].contains { id in
+        clickSource?.identifier?.rawValue.hasPrefix(id) == true
+    }
+    if !isRealWindow { clickSource?.close() }
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
         NSApp.activate(ignoringOtherApps: true)
     }
