@@ -41,13 +41,12 @@ Alternatively, [download Clabar.zip](https://github.com/Magir/clabar/releases/la
 ## Screenshots
 
 <p align="center">
-  <img src="docs/settings.png" alt="Settings: language, menu bar icon, event recording, notifications" width="32%">
-  <img src="docs/popover.png" alt="Popover with limits, usage chart and notifications" width="32%">
-  <img src="docs/event-detail.png" alt="Event details: full message, project, source, session" width="32%">
+  <a href="docs/popover.png"><img src="docs/thumbs/popover.png" alt="Popover: usage chart and notifications" width="24%"></a>
+  <a href="docs/history.png"><img src="docs/thumbs/history.png" alt="Notification history with filters" width="24%"></a>
+  <a href="docs/settings.png"><img src="docs/thumbs/settings.png" alt="Settings" width="24%"></a>
+  <a href="docs/event-detail.png"><img src="docs/thumbs/event-detail.png" alt="Event details" width="24%"></a>
 </p>
-<p align="center">
-  <img src="docs/history.png" alt="Notification history: sortable table with type, project and source filters" width="97%">
-</p>
+<p align="center"><sub>Click a thumbnail for the full screenshot.</sub></p>
 
 ## Build & run
 
