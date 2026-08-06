@@ -39,6 +39,7 @@ struct PopoverView: View {
         }
         .padding(12)
         .frame(width: 360)
+        .environment(\.locale, Lang.locale)
     }
 
     private var header: some View {
@@ -56,20 +57,34 @@ struct PopoverView: View {
     @ViewBuilder
     private var nudgeBanners: some View {
         ForEach(model.nudges) { nudge in
-            HStack(alignment: .top, spacing: 8) {
-                Text("🔥")
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("\(nudge.label): \(L("не потрачено", "unused")) \(Int(round(nudge.leftPct * 100)))% \(L("лимита", "of the limit"))")
-                        .font(.callout.weight(.semibold))
-                    Text("\(L("Сброс", "Resets")) \(nudge.resetsAt, style: .relative) — \(L("самое время нагрузить Клода!", "time to put Claude to work!"))")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(8)
-            .background(.orange.opacity(0.15), in: RoundedRectangle(cornerRadius: 8))
+            banner(
+                emoji: "🔥",
+                title: "\(nudge.label): \(L("не потрачено", "unused")) \(Int(round(nudge.leftPct * 100)))% \(L("лимита", "of the limit"))",
+                subtitle: "\(L("Сброс", "Resets")) \(Text(nudge.resetsAt, style: .relative)) — \(L("самое время нагрузить Клода!", "time to put Claude to work!"))",
+                color: .orange
+            )
         }
+        ForEach(model.lowWarnings) { warning in
+            banner(
+                emoji: "⚠️",
+                title: "\(warning.label): \(L("осталось", "only")) \(Int(round(warning.leftPct * 100)))% \(L("лимита", "of the limit left"))",
+                subtitle: "\(L("Сброс", "Resets")) \(Text(warning.resetsAt, style: .relative)) — \(L("притормози или дождись сброса.", "ease off or wait for the reset."))",
+                color: .red
+            )
+        }
+    }
+
+    private func banner(emoji: String, title: String, subtitle: LocalizedStringKey, color: Color) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Text(emoji)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.callout.weight(.semibold))
+                Text(subtitle).font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(8)
+        .background(color.opacity(0.15), in: RoundedRectangle(cornerRadius: 8))
     }
 
     // MARK: - Usage
@@ -148,8 +163,6 @@ struct PopoverView: View {
             Spacer()
             Button(L("Обновить", "Refresh")) { Task { await usage.fetchUsage() } }
                 .buttonStyle(.borderless).font(.caption)
-            Button(L("Выход", "Quit")) { NSApplication.shared.terminate(nil) }
-                .buttonStyle(.borderless).font(.caption).foregroundStyle(.secondary)
         }
     }
 }

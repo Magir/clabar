@@ -42,6 +42,7 @@ struct LogWindowView: View {
             table
         }
         .frame(minWidth: 700, minHeight: 300)
+        .environment(\.locale, Lang.locale)
     }
 
     private var filterBar: some View {

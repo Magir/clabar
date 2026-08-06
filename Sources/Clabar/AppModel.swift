@@ -9,6 +9,8 @@ enum SettingsKeys {
     static let nudgeEnabled = "nudgeEnabled"
     static let nudgeThresholdPct = "nudgeThresholdPct" // Int 0-100
     static let nudgeWindowHours = "nudgeWindowHours"   // Int
+    static let lowWarnEnabled = "lowWarnEnabled"
+    static let lowWarnThresholdPct = "lowWarnThresholdPct" // Int 0-100
     static let serverPort = "serverPort"
 
     static func registerDefaults() {
@@ -19,6 +21,8 @@ enum SettingsKeys {
             nudgeEnabled: true,
             nudgeThresholdPct: 50,
             nudgeWindowHours: 24,
+            lowWarnEnabled: true,
+            lowWarnThresholdPct: 85,
             serverPort: Int(HookInstaller.defaultPort),
         ])
     }
@@ -113,6 +117,15 @@ final class AppModel: ObservableObject {
             usage: usage.usage,
             thresholdPct: Double(UserDefaults.standard.integer(forKey: SettingsKeys.nudgeThresholdPct)),
             windowHours: Double(UserDefaults.standard.integer(forKey: SettingsKeys.nudgeWindowHours)),
+            now: now
+        )
+    }
+
+    var lowWarnings: [Nudge] {
+        guard UserDefaults.standard.bool(forKey: SettingsKeys.lowWarnEnabled) else { return [] }
+        return computeLowWarnings(
+            usage: usage.usage,
+            thresholdPct: Double(UserDefaults.standard.integer(forKey: SettingsKeys.lowWarnThresholdPct)),
             now: now
         )
     }

@@ -74,34 +74,65 @@ final class UsageModelTests: XCTestCase {
     }
 }
 
-final class NudgeTests: XCTestCase {
-    private func usage(_ buckets: [(String, Double, Date?)]) -> UsageResponse {
-        let formatter = ISO8601DateFormatter()
-        return UsageResponse(buckets: buckets.map { key, utilization, reset in
-            NamedBucket(key: key, bucket: UsageBucket(
-                utilization: utilization,
-                resetsAt: reset.map { formatter.string(from: $0) }
-            ))
-        }, extraUsage: nil)
-    }
+private func makeUsage(_ buckets: [(String, Double, Date?)]) -> UsageResponse {
+    let formatter = ISO8601DateFormatter()
+    return UsageResponse(buckets: buckets.map { key, utilization, reset in
+        NamedBucket(key: key, bucket: UsageBucket(
+            utilization: utilization,
+            resetsAt: reset.map { formatter.string(from: $0) }
+        ))
+    }, extraUsage: nil)
+}
 
-    func testNudgeFiresOnLowUsageCloseToReset() {
+final class NudgeTests: XCTestCase {
+    func testNudgeFiresOnlyForOverallWeekly() {
         let now = Date()
-        let response = usage([
-            ("five_hour", 10, now.addingTimeInterval(3600)),        // ignored: 5h window
-            ("seven_day", 30, now.addingTimeInterval(10 * 3600)),   // fires
-            ("seven_day_fable", 90, now.addingTimeInterval(10 * 3600)), // too used
-            ("seven_day_opus", 30, now.addingTimeInterval(48 * 3600)),  // too far
+        let response = makeUsage([
+            ("five_hour", 10, now.addingTimeInterval(3600)),            // ignored: 5h window
+            ("seven_day", 30, now.addingTimeInterval(10 * 3600)),       // fires
+            ("seven_day_fable", 20, now.addingTimeInterval(10 * 3600)), // per-model: excluded by key
         ])
         let nudges = computeNudges(usage: response, thresholdPct: 50, windowHours: 24, now: now)
         XCTAssertEqual(nudges.map(\.bucketKey), ["seven_day"])
         XCTAssertEqual(nudges[0].leftPct, 0.7, accuracy: 0.001)
     }
 
-    func testNoNudgeAfterReset() {
+    func testNoNudgeWhenResetFarOrPassed() {
         let now = Date()
-        let response = usage([("seven_day", 10, now.addingTimeInterval(-60))])
-        XCTAssertTrue(computeNudges(usage: response, thresholdPct: 50, windowHours: 24, now: now).isEmpty)
+        XCTAssertTrue(computeNudges(
+            usage: makeUsage([("seven_day", 10, now.addingTimeInterval(-60))]),
+            thresholdPct: 50, windowHours: 24, now: now
+        ).isEmpty)
+        XCTAssertTrue(computeNudges(
+            usage: makeUsage([("seven_day", 10, now.addingTimeInterval(48 * 3600))]),
+            thresholdPct: 50, windowHours: 24, now: now
+        ).isEmpty)
+    }
+}
+
+final class LowWarningTests: XCTestCase {
+    func testWarnsAcrossAllWindows() {
+        let now = Date()
+        let response = makeUsage([
+            ("five_hour", 92, now.addingTimeInterval(2 * 3600)),         // fires
+            ("seven_day", 58, now.addingTimeInterval(30 * 3600)),        // below threshold
+            ("seven_day_fable", 88, now.addingTimeInterval(30 * 3600)),  // fires
+        ])
+        let warnings = computeLowWarnings(usage: response, thresholdPct: 85, now: now)
+        XCTAssertEqual(warnings.map(\.bucketKey), ["five_hour", "seven_day_fable"])
+        XCTAssertEqual(warnings[0].leftPct, 0.08, accuracy: 0.001)
+    }
+
+    func testNoWarningBelowThresholdOrWithoutReset() {
+        let now = Date()
+        XCTAssertTrue(computeLowWarnings(
+            usage: makeUsage([("seven_day", 84, now.addingTimeInterval(3600))]),
+            thresholdPct: 85, now: now
+        ).isEmpty)
+        XCTAssertTrue(computeLowWarnings(
+            usage: makeUsage([("seven_day", 99, nil)]),
+            thresholdPct: 85, now: now
+        ).isEmpty)
     }
 }
 

@@ -115,6 +115,7 @@ struct MenuBarLabel: View {
             if unread > 0 { parts.append("✉\(unread)") }
         }
         if !model.nudges.isEmpty { parts.append("🔥") }
+        if !model.lowWarnings.isEmpty { parts.append("⚠️") }
         return parts.joined(separator: " ")
     }
 }

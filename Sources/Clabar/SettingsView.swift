@@ -14,6 +14,8 @@ struct SettingsView: View {
     @AppStorage(SettingsKeys.nudgeEnabled) private var nudgeEnabled = true
     @AppStorage(SettingsKeys.nudgeThresholdPct) private var nudgeThreshold = 50
     @AppStorage(SettingsKeys.nudgeWindowHours) private var nudgeWindow = 24
+    @AppStorage(SettingsKeys.lowWarnEnabled) private var lowWarnEnabled = true
+    @AppStorage(SettingsKeys.lowWarnThresholdPct) private var lowWarnThreshold = 85
     @AppStorage(SettingsKeys.serverPort) private var serverPort = Int(HookInstaller.defaultPort)
     @AppStorage(SessionFocus.keystrokesDefaultsKey) private var sendKeystrokes = false
     @AppStorage(Notifier.soundDefaultsKey) private var sound = true
@@ -65,12 +67,20 @@ struct SettingsView: View {
             }
 
             Section(L("Напоминание «сожги лимит»", "“Burn the limit” reminder")) {
-                Toggle(L("Подсвечивать, когда лимит пропадает", "Highlight when limit is about to expire unused"), isOn: $nudgeEnabled)
+                Toggle(L("Подсвечивать, когда недельный лимит пропадает", "Highlight when the weekly limit is about to expire unused"), isOn: $nudgeEnabled)
                 if nudgeEnabled {
                     Stepper(L("Если использовано меньше \(nudgeThreshold)%", "If less than \(nudgeThreshold)% used"),
                             value: $nudgeThreshold, in: 5...95, step: 5)
                     Stepper(L("и до сброса меньше \(nudgeWindow) ч", "and reset is under \(nudgeWindow) h away"),
                             value: $nudgeWindow, in: 3...48, step: 3)
+                }
+            }
+
+            Section(L("Предупреждение «лимит кончается»", "“Running low” warning")) {
+                Toggle(L("Подсвечивать, когда лимит почти исчерпан", "Highlight when a limit is almost used up"), isOn: $lowWarnEnabled)
+                if lowWarnEnabled {
+                    Stepper(L("Если использовано больше \(lowWarnThreshold)%", "If more than \(lowWarnThreshold)% used"),
+                            value: $lowWarnThreshold, in: 50...95, step: 5)
                 }
             }
 
@@ -126,9 +136,14 @@ struct SettingsView: View {
                     Button(L("Выйти из аккаунта", "Sign out"), role: .destructive) { usage.signOut() }
                 }
             }
+
+            Section {
+                Button(L("Завершить Clabar", "Quit Clabar")) { NSApplication.shared.terminate(nil) }
+            }
         }
         .formStyle(.grouped)
         .frame(width: 460, height: 660)
+        .environment(\.locale, Lang.locale)
         .sheet(isPresented: $showSnippet) { snippetSheet }
     }
 

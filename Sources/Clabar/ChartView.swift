@@ -23,6 +23,7 @@ func bucketShortLabel(for key: String) -> String {
 
 struct UsageChartView: View {
     @ObservedObject var historyService: HistoryService
+    @ObservedObject private var lang = LangObserver.shared
     @State private var selectedRange: TimeRange = .day1
     @State private var selectedDate: Date?
 
