@@ -4,6 +4,10 @@ Clabar: macOS menu bar app (SwiftUI, macOS 14+, SPM executable — no Xcode
 project). Shows Claude usage limits + receives Claude Code hook events as
 native notifications. UI is localized RU/EN via inline `L("ру", "en")` pairs.
 
+Conventions: **commit messages are written in English** (public repo). Code,
+comments and docs are English too; only user-facing UI strings carry the
+RU/EN pairs.
+
 ## Commands
 
 ```sh
