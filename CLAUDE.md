@@ -139,6 +139,11 @@ Files (Sources/Clabar/):
   resolves (see `resolveHostPath`).
 - **UserDefaults keys in tests**: pin `appLanguage` (labels are localized) and
   clean up in tearDown; `EventStore(directory:)` takes a temp dir.
+- **Quit interception vs Sparkle**: `applicationShouldTerminate` closes windows
+  and cancels Cmd+Q — but Sparkle's "Install and Relaunch" terminates the app
+  the same way. Always allow termination while
+  `updater.sessionInProgress` (and for explicitQuit / logout), or updates
+  silently fail with the old version still running.
 - Notification permission is user-granted; the app must degrade gracefully
   without it.
 

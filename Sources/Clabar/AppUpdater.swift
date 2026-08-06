@@ -44,6 +44,12 @@ final class AppUpdater: ObservableObject {
         updaterController.checkForUpdates(nil)
     }
 
+    /// True while Sparkle is mid-flow (checking, downloading, installing).
+    /// The quit interceptor must let termination through in that state.
+    var sessionInProgress: Bool {
+        updaterController.updater.sessionInProgress
+    }
+
     var version: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
     }

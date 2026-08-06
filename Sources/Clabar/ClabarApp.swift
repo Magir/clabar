@@ -25,6 +25,12 @@ final class ClabarAppDelegate: NSObject, NSApplicationDelegate {
             .attributeDescriptor(forKeyword: AEKeyword(0x7768793F)) // kAEQuitReason
         if quitReason != nil { return .terminateNow }
 
+        // Sparkle's "Install and Relaunch" terminates the app too — cancelling
+        // it aborts the update (the settings window just closes and the old
+        // version keeps running).
+        let updating = MainActor.assumeIsolated { AppModel.shared.updater.sessionInProgress }
+        if updating { return .terminateNow }
+
         let realWindows = NSApp.windows.filter { window in
             window.isVisible && ["log", "settings"].contains {
                 window.identifier?.rawValue.hasPrefix($0) == true
