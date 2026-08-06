@@ -161,6 +161,12 @@ enum EventClassifier {
 final class EventStore: ObservableObject {
     @Published private(set) var events: [ClaudeEvent] = [] // newest first
 
+    static func recordKey(_ kind: EventKind) -> String { "recordFor.\(kind.rawValue)" }
+
+    nonisolated static func recordingEnabled(_ kind: EventKind) -> Bool {
+        UserDefaults.standard.object(forKey: "recordFor.\(kind.rawValue)") as? Bool ?? true
+    }
+
     /// Called for every accepted (non-deduped) event — the notifier hooks in here.
     var onEvent: ((ClaudeEvent) -> Void)?
 
@@ -189,6 +195,7 @@ final class EventStore: ObservableObject {
     }
 
     func add(_ event: ClaudeEvent) {
+        guard Self.recordingEnabled(event.kind) else { return }
         // Dedupe: PermissionRequest and Notification(permission_prompt) describe
         // the same moment; identical bursts within the window collapse.
         let isDuplicate = events.lazy.prefix(20).contains {

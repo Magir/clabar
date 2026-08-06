@@ -13,6 +13,8 @@ jobs:
     runs-on: macos-14
     permissions:
       contents: write
+    outputs:
+      appcast: ${{ steps.appcast.outputs.generated }}
     steps:
       - uses: actions/checkout@v4
 
@@ -24,16 +26,17 @@ jobs:
           SPARKLE_PUB_KEY: ${{ vars.SPARKLE_PUBLIC_KEY }}
         run: |
           set -euo pipefail
-          if [[ -z "${SPARKLE_PUB_KEY:-}" ]]; then
-            echo "::error::Missing SPARKLE_PUBLIC_KEY repository variable (Settings → Secrets and variables → Actions → Variables)."
-            exit 1
+          if [[ -n "${SPARKLE_PUB_KEY:-}" ]]; then
+            owner="$(printf '%s' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')"
+            repo="${GITHUB_REPOSITORY#*/}"
+            make app \
+              APP_VERSION="${GITHUB_REF_NAME#v}" \
+              SU_FEED_URL="https://${owner}.github.io/${repo}/appcast.xml" \
+              SPARKLE_PUB_KEY="${SPARKLE_PUB_KEY}"
+          else
+            echo "::warning::SPARKLE_PUBLIC_KEY variable not set — building without auto-update support."
+            make app APP_VERSION="${GITHUB_REF_NAME#v}"
           fi
-          owner="$(printf '%s' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')"
-          repo="${GITHUB_REPOSITORY#*/}"
-          make app \
-            APP_VERSION="${GITHUB_REF_NAME#v}" \
-            SU_FEED_URL="https://${owner}.github.io/${repo}/appcast.xml" \
-            SPARKLE_PUB_KEY="${SPARKLE_PUB_KEY}"
 
       - name: Package
         run: ditto -c -k --sequesterRsrc --keepParent build/Clabar.app Clabar.zip
@@ -54,13 +57,15 @@ jobs:
           body_path: release-notes.md
 
       - name: Generate Sparkle appcast
+        id: appcast
         env:
           SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
         run: |
           set -euo pipefail
           if [[ -z "${SPARKLE_PRIVATE_KEY:-}" ]]; then
-            echo "::error::Missing SPARKLE_PRIVATE_KEY repository secret."
-            exit 1
+            echo "::warning::SPARKLE_PRIVATE_KEY secret not set — skipping appcast; auto-updates disabled for this release."
+            echo "generated=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
           mkdir -p dist/archives dist/site
           cp Clabar.zip dist/archives/Clabar.zip
@@ -71,14 +76,17 @@ jobs:
               --download-url-prefix "https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/" \
               --maximum-deltas 0 \
               -o dist/site/appcast.xml
+          echo "generated=true" >> "$GITHUB_OUTPUT"
 
       - name: Upload appcast for GitHub Pages
+        if: steps.appcast.outputs.generated == 'true'
         uses: actions/upload-pages-artifact@v4
         with:
           path: dist/site
 
   deploy_appcast:
     needs: release
+    if: needs.release.outputs.appcast == 'true'
     runs-on: ubuntu-latest
     permissions:
       pages: write

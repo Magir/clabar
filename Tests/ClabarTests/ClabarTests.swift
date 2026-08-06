@@ -373,6 +373,22 @@ final class EventStoreTests: XCTestCase {
         XCTAssertEqual(store.unreadCount, 0)
     }
 
+    func testRecordingFilterSkipsDisabledKinds() {
+        UserDefaults.standard.set(false, forKey: EventStore.recordKey(.done))
+        defer { UserDefaults.standard.removeObject(forKey: EventStore.recordKey(.done)) }
+
+        let store = makeStore()
+        store.add(EventClassifier.classify(payload: [
+            "hook_event_name": "Stop", "session_id": "s1", "last_assistant_message": "A",
+        ], headers: [:])!)
+        XCTAssertTrue(store.events.isEmpty)
+
+        store.add(EventClassifier.classify(payload: [
+            "hook_event_name": "PermissionRequest", "session_id": "s1", "tool_name": "Bash",
+        ], headers: [:])!)
+        XCTAssertEqual(store.events.count, 1) // other kinds unaffected
+    }
+
     func testDistinctEventsBothKept() {
         let store = makeStore()
         store.add(EventClassifier.classify(payload: [

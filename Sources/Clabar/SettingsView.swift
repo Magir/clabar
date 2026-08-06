@@ -26,6 +26,11 @@ struct SettingsView: View {
     @AppStorage("\(Notifier.bannersForKindKey).error") private var bannersError = true
     @AppStorage("\(Notifier.bannersForKindKey).info") private var bannersInfo = false
 
+    @AppStorage("recordFor.ask") private var recordAsk = true
+    @AppStorage("recordFor.done") private var recordDone = true
+    @AppStorage("recordFor.error") private var recordError = true
+    @AppStorage("recordFor.info") private var recordInfo = true
+
     @State private var devcontainerMessage: String?
     @State private var showSnippet = false
 
@@ -55,13 +60,27 @@ struct SettingsView: View {
                 Toggle(L("Fable (и полоска в иконке)", "Fable (adds an icon bar too)"), isOn: $pctFable)
             }
 
+            Section(L("Какие события вести", "Which events to record")) {
+                Text(L("Выключенные типы не попадают ни в журнал, ни в баннеры.",
+                       "Disabled kinds are neither logged nor shown as banners."))
+                    .font(.caption).foregroundStyle(.secondary)
+                Toggle("\(EventKind.ask.emoji) \(L("Запросы", "Asks"))", isOn: $recordAsk)
+                Toggle("\(EventKind.done.emoji) \(L("Завершение работы", "Task completion"))", isOn: $recordDone)
+                Toggle("\(EventKind.error.emoji) \(L("Сбои", "Failures"))", isOn: $recordError)
+                Toggle("\(EventKind.info.emoji) \(L("Прочее", "Other"))", isOn: $recordInfo)
+            }
+
             Section(L("Уведомления", "Notifications")) {
                 notificationStatusRow
                 Toggle(L("Звук для запросов", "Sound for asks"), isOn: $sound)
                 Toggle(L("Баннеры: запросы", "Banners: asks"), isOn: $bannersAsk)
+                    .disabled(!recordAsk)
                 Toggle(L("Баннеры: завершение работы", "Banners: task completion"), isOn: $bannersDone)
+                    .disabled(!recordDone)
                 Toggle(L("Баннеры: сбои", "Banners: failures"), isOn: $bannersError)
+                    .disabled(!recordError)
                 Toggle(L("Баннеры: прочее", "Banners: other"), isOn: $bannersInfo)
+                    .disabled(!recordInfo)
                 Toggle(L("Отвечать на запросы клавишами (⏎/⎋, экспериментально)",
                          "Answer prompts with keystrokes (⏎/⎋, experimental)"), isOn: $sendKeystrokes)
                 if sendKeystrokes {

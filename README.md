@@ -4,6 +4,10 @@ macOS menu bar app for Claude: usage limits at a glance + native notifications f
 
 The usage-tracking core is derived from [claude-usage-bar](https://github.com/Blimp-Labs/claude-usage-bar) (BSD-2-Clause), extended with a notification pipeline built on [Claude Code hooks](https://code.claude.com/docs/en/hooks).
 
+## Install
+
+**[Download the latest Clabar.zip](https://github.com/Magir/clabar/releases/latest/download/Clabar.zip)** — unzip, drop `Clabar.app` into `/Applications`, and on first launch right-click → **Open** (the build is not notarized). Release builds update themselves via Sparkle. Or build from source — see below.
+
 ## Features
 
 - **Menu bar icon with a popover.** Customizable: mini usage bars, percentages as text (5-hour / weekly / Fable), unread notifications counter, 🔥/⚠️ status markers.
