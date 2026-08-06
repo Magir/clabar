@@ -108,3 +108,8 @@ jobs:
       - name: Deploy appcast
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          # Pages deployments on this repo have sat in deployment_queued for
+          # >10 min; the action's default 10-min timeout then fails the job
+          # while the deployment still lands later.
+          timeout: 1800000
