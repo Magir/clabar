@@ -1,0 +1,92 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release:
+    runs-on: macos-14
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Build release app bundle
+        env:
+          SPARKLE_PUB_KEY: ${{ vars.SPARKLE_PUBLIC_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${SPARKLE_PUB_KEY:-}" ]]; then
+            echo "::error::Missing SPARKLE_PUBLIC_KEY repository variable (Settings → Secrets and variables → Actions → Variables)."
+            exit 1
+          fi
+          owner="$(printf '%s' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')"
+          repo="${GITHUB_REPOSITORY#*/}"
+          make app \
+            APP_VERSION="${GITHUB_REF_NAME#v}" \
+            SU_FEED_URL="https://${owner}.github.io/${repo}/appcast.xml" \
+            SPARKLE_PUB_KEY="${SPARKLE_PUB_KEY}"
+
+      - name: Package
+        run: ditto -c -k --sequesterRsrc --keepParent build/Clabar.app Clabar.zip
+
+      - name: Generate release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
+            --method POST \
+            -f tag_name="${GITHUB_REF_NAME}" \
+            --jq '.body' > release-notes.md
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: Clabar.zip
+          body_path: release-notes.md
+
+      - name: Generate Sparkle appcast
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${SPARKLE_PRIVATE_KEY:-}" ]]; then
+            echo "::error::Missing SPARKLE_PRIVATE_KEY repository secret."
+            exit 1
+          fi
+          mkdir -p dist/archives dist/site
+          cp Clabar.zip dist/archives/Clabar.zip
+          printf '%s' "$SPARKLE_PRIVATE_KEY" | \
+            .build/artifacts/sparkle/Sparkle/bin/generate_appcast \
+              dist/archives \
+              --ed-key-file - \
+              --download-url-prefix "https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/" \
+              --maximum-deltas 0 \
+              -o dist/site/appcast.xml
+
+      - name: Upload appcast for GitHub Pages
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist/site
+
+  deploy_appcast:
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy appcast
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -4,6 +4,8 @@ import UniformTypeIdentifiers
 struct SettingsView: View {
     @ObservedObject var model: AppModel
     @ObservedObject var usage: UsageService
+    @ObservedObject var notifier: Notifier
+    @ObservedObject var updater: AppUpdater
     @ObservedObject private var lang = LangObserver.shared
 
     @AppStorage(SettingsKeys.iconShowBars) private var showBars = true
@@ -30,6 +32,8 @@ struct SettingsView: View {
     init(model: AppModel) {
         self.model = model
         self.usage = model.usage
+        self.notifier = model.notifier
+        self.updater = model.updater
     }
 
     var body: some View {
@@ -52,6 +56,7 @@ struct SettingsView: View {
             }
 
             Section(L("Уведомления", "Notifications")) {
+                notificationStatusRow
                 Toggle(L("Звук для запросов", "Sound for asks"), isOn: $sound)
                 Toggle(L("Баннеры: запросы", "Banners: asks"), isOn: $bannersAsk)
                 Toggle(L("Баннеры: завершение работы", "Banners: task completion"), isOn: $bannersDone)
@@ -137,16 +142,62 @@ struct SettingsView: View {
                 }
             }
 
+            Section(L("Обновления", "Updates")) {
+                LabeledContent(L("Версия", "Version"), value: updater.version)
+                if updater.isConfigured {
+                    Button(L("Проверить обновления…", "Check for updates…")) { updater.checkForUpdates() }
+                        .disabled(!updater.canCheckForUpdates)
+                } else {
+                    Text(L("Локальная сборка — автообновления выключены. Релизы: GitHub.",
+                           "Local build — auto-updates disabled. Releases: GitHub."))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+
             Section {
                 Button(L("Завершить Clabar", "Quit Clabar")) { NSApplication.shared.terminate(nil) }
             }
         }
+        .onAppear { notifier.refreshAuthorizationStatus() }
         .formStyle(.grouped)
         .frame(width: 460, height: 660)
         .environment(\.locale, Lang.locale)
         .sheet(isPresented: $showSnippet) { snippetSheet }
         .onAppear { DockPolicy.windowShown() }
         .onDisappear { DockPolicy.windowHidden() }
+    }
+
+    @ViewBuilder
+    private var notificationStatusRow: some View {
+        LabeledContent(L("Системные уведомления", "System notifications")) {
+            HStack {
+                switch notifier.authorizationStatus {
+                case .authorized, .provisional:
+                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                    Text(L("включены", "enabled"))
+                case .denied:
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(.red)
+                    Text(L("выключены", "disabled"))
+                    Button(L("Открыть настройки macOS", "Open macOS settings")) {
+                        openNotificationSystemSettings()
+                    }
+                case .notDetermined:
+                    Image(systemName: "questionmark.circle.fill").foregroundStyle(.orange)
+                    Text(L("не запрошены", "not requested"))
+                default:
+                    Image(systemName: "questionmark.circle").foregroundStyle(.secondary)
+                    Text("—")
+                }
+            }
+        }
+    }
+
+    private func openNotificationSystemSettings() {
+        // Deep link to this app's notification pane; falls back to the list.
+        let bundleId = Bundle.main.bundleIdentifier ?? ""
+        let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension?id=\(bundleId)")
+            ?? URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension")!
+        NSWorkspace.shared.open(url)
     }
 
     private var snippetSheet: some View {

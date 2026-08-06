@@ -24,5 +24,9 @@
     <true/>
     <key>NSAppleEventsUsageDescription</key>
     <string>Clabar активирует окно нужной сессии Claude и (опционально) отвечает на permission-запросы нажатием клавиш.</string>
+    <key>SUEnableAutomaticChecks</key>
+    <true/>
+    <!-- SUFeedURL and SUPublicEDKey are stamped by CI on release builds. -->
+
 </dict>
 </plist>

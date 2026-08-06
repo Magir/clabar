@@ -3,9 +3,12 @@ import UserNotifications
 
 /// System notification banners for Claude events, with action buttons on asks.
 @MainActor
-final class Notifier: NSObject, UNUserNotificationCenterDelegate {
+final class Notifier: NSObject, ObservableObject, UNUserNotificationCenterDelegate {
     static let soundDefaultsKey = "notificationSound"
     static let bannersForKindKey = "bannersFor" // e.g. "bannersFor.error" = false
+
+    /// System-level permission state, for the settings indicator.
+    @Published private(set) var authorizationStatus: UNAuthorizationStatus?
 
     private weak var store: EventStore?
     private var available = false
@@ -23,8 +26,17 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
 
         let center = UNUserNotificationCenter.current()
         center.delegate = self
-        center.requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
+        center.requestAuthorization(options: [.alert, .sound, .badge]) { [weak self] _, _ in
+            Task { @MainActor in self?.refreshAuthorizationStatus() }
+        }
         updateCategories()
+    }
+
+    func refreshAuthorizationStatus() {
+        guard available else { return }
+        UNUserNotificationCenter.current().getNotificationSettings { [weak self] settings in
+            Task { @MainActor in self?.authorizationStatus = settings.authorizationStatus }
+        }
     }
 
     /// Re-registered on every post so action titles follow language switches.

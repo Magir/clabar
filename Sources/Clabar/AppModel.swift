@@ -36,6 +36,7 @@ final class AppModel: ObservableObject {
     let history = HistoryService()
     let store = EventStore()
     let notifier: Notifier
+    let updater = AppUpdater()
     private var server: EventServer?
 
     @Published var hooksInstalled = false
