@@ -34,6 +34,7 @@ struct SettingsView: View {
     @State private var devcontainerMessage: String?
     @State private var showSnippet = false
     @State private var launchAtLogin = false
+    @State private var axTrusted = false
 
     init(model: AppModel) {
         self.model = model
@@ -94,10 +95,28 @@ struct SettingsView: View {
                     .disabled(!recordInfo)
                 Toggle(L("Отвечать на запросы клавишами (⏎/⎋, экспериментально)",
                          "Answer prompts with keystrokes (⏎/⎋, experimental)"), isOn: $sendKeystrokes)
+                    .onChange(of: sendKeystrokes) { _, enabled in
+                        if enabled && !SessionFocus.accessibilityTrusted {
+                            SessionFocus.requestAccessibility()
+                        }
+                        axTrusted = SessionFocus.accessibilityTrusted
+                    }
                 if sendKeystrokes {
-                    Text(L("Нажатие уйдёт в активное окно после фокусировки сессии. Нужно разрешение «Универсальный доступ» (Accessibility) для Clabar.",
-                           "The keystroke goes to the active window after focusing the session. Clabar needs the Accessibility permission."))
-                        .font(.caption).foregroundStyle(.orange)
+                    HStack {
+                        Image(systemName: axTrusted ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                            .foregroundStyle(axTrusted ? .green : .orange)
+                        Text(axTrusted
+                             ? L("Разрешение Accessibility выдано", "Accessibility permission granted")
+                             : L("Нужно разрешение Accessibility", "Accessibility permission required"))
+                        if !axTrusted {
+                            Button(L("Открыть настройки Accessibility", "Open Accessibility settings")) {
+                                NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
+                            }
+                        }
+                    }
+                    Text(L("Нажатие уйдёт в активное окно после фокусировки сессии.",
+                           "The keystroke goes to the active window after focusing the session."))
+                        .font(.caption).foregroundStyle(.secondary)
                 }
             }
 
@@ -191,6 +210,7 @@ struct SettingsView: View {
         .onAppear {
             notifier.refreshAuthorizationStatus()
             launchAtLogin = LoginItem.isEnabled
+            axTrusted = SessionFocus.accessibilityTrusted
         }
         .formStyle(.grouped)
         .frame(width: 460, height: 660)

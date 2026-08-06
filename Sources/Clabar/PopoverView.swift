@@ -264,6 +264,13 @@ struct EventRow: View {
                 .controlSize(.small)
                 .font(.caption2)
                 .padding(.leading, 18)
+
+                if !SessionFocus.keystrokesEnabled {
+                    Text(L("⏎/⎋ пока только фокусируют сессию — включите «Отвечать клавишами» в настройках.",
+                           "⏎/⎋ only focus the session for now — enable “Answer with keystrokes” in Settings."))
+                        .font(.caption2).foregroundStyle(.tertiary)
+                        .padding(.leading, 18)
+                }
             }
         }
     }
