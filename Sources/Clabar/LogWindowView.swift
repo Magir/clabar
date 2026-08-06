@@ -47,8 +47,20 @@ struct LogWindowView: View {
         .sheet(item: $detailEvent) { event in
             EventDetailView(event: event) { detailEvent = nil }
         }
-        .onAppear { DockPolicy.windowShown() }
+        .onAppear {
+            DockPolicy.windowShown()
+            consumePendingDetail()
+        }
         .onDisappear { DockPolicy.windowHidden() }
+        .onChange(of: model.pendingDetailEvent) { consumePendingDetail() }
+    }
+
+    /// The popover requests details by parking the event in the model and
+    /// opening this window — pick it up whether we just opened or were open.
+    private func consumePendingDetail() {
+        guard let event = model.pendingDetailEvent else { return }
+        detailEvent = event
+        model.pendingDetailEvent = nil
     }
 
     private var filterBar: some View {

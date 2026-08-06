@@ -40,6 +40,8 @@ final class AppModel: ObservableObject {
 
     @Published var hooksInstalled = false
     @Published var serverError: String?
+    /// Event whose details the history window should show once it opens.
+    @Published var pendingDetailEvent: ClaudeEvent?
     /// Ticks every few minutes so time-based UI (nudge, "resets in…") stays fresh.
     @Published var now = Date()
 

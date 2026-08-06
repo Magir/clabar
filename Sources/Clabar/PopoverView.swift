@@ -148,7 +148,10 @@ struct PopoverView: View {
                     .font(.caption).foregroundStyle(.secondary)
             } else {
                 ForEach(store.events.prefix(6)) { event in
-                    EventRow(event: event, store: store)
+                    EventRow(event: event, store: store) {
+                        model.pendingDetailEvent = event
+                        presentFront { openWindow(id: "log") }
+                    }
                 }
             }
         }
@@ -174,13 +177,15 @@ struct PopoverView: View {
 struct EventRow: View {
     let event: ClaudeEvent
     let store: EventStore
+    /// Invoked on row click — opens the event details in the history window.
+    let onDetails: () -> Void
     @ObservedObject private var lang = LangObserver.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             Button {
                 store.markRead(event.id)
-                SessionFocus.focus(event)
+                onDetails()
             } label: {
                 HStack(alignment: .top, spacing: 6) {
                     Image(systemName: event.kind.symbol)
