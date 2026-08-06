@@ -10,6 +10,9 @@ mkdir -p "$CFG/hooks"
 cat > "$CFG/hooks/clabar-hook.sh" <<'HOOK'
 #!/bin/sh
 # Clabar: forward Claude Code hook events to the menu bar app on the host.
+# curl намеренно в форграунде: фоновый (`&` + exit 0) умирает вместе с
+# процесс-группой хука раньше, чем откроет соединение (Claude Code 2.1.223),
+# а неблокирующим хук и так делает async:true в settings.json.
 h="${CLABAR_HOST:-host.docker.internal}"
 p="${CLABAR_PORT:-8737}"
 curl -s -m 3 -X POST "http://$h:$p/event" \
@@ -17,7 +20,7 @@ curl -s -m 3 -X POST "http://$h:$p/event" \
   -H "X-Clabar-Term: ${TERM_PROGRAM:-}" \
   -H "X-Clabar-Bundle: ${__CFBundleIdentifier:-}" \
   -H "X-Clabar-Remote: ${REMOTE_CONTAINERS:-}${CODESPACES:-}container" \
-  --data-binary @- >/dev/null 2>&1 &
+  --data-binary @- >/dev/null 2>&1
 exit 0
 HOOK
 chmod +x "$CFG/hooks/clabar-hook.sh"

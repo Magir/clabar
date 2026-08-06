@@ -95,19 +95,27 @@ struct MenuBarLabel: View {
             if showBars {
                 Image(nsImage: renderIcon(rows: barRows))
             }
-            if !pctPart.isEmpty {
-                Text(pctPart)
-                    .font(.system(size: 12, weight: .medium).monospacedDigit())
+            if let status = statusText {
+                status.font(.system(size: 12, weight: .medium).monospacedDigit())
             }
-            if showUnread, store.unreadCount > 0 {
-                Image(systemName: "envelope.fill")
-                Text("\(store.unreadCount)")
-                    .font(.system(size: 12, weight: .medium).monospacedDigit())
-            }
-            if !model.nudges.isEmpty { Text("🔥") }
-            if !model.lowWarnings.isEmpty { Text("⚠️") }
         }
         .task { await debugAutoOpen() }
+    }
+
+    /// One combined Text: in a MenuBarExtra label, standalone Images after the
+    /// first are dropped, but SF Symbols embedded in a Text render fine.
+    private var statusText: Text? {
+        var parts: [Text] = []
+        if !pctPart.isEmpty {
+            parts.append(Text(pctPart))
+        }
+        if showUnread, store.unreadCount > 0 {
+            parts.append(Text(Image(systemName: "envelope.fill")) + Text("\(store.unreadCount)"))
+        }
+        if !model.nudges.isEmpty { parts.append(Text("🔥")) }
+        if !model.lowWarnings.isEmpty { parts.append(Text("⚠️")) }
+        guard let first = parts.first else { return nil }
+        return parts.dropFirst().reduce(first) { $0 + Text(" ") + $1 }
     }
 
     /// CLABAR_DEBUG_OPEN=<window id>: open the window at launch and dump its

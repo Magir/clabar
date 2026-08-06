@@ -35,7 +35,10 @@ enum HookInstaller {
         """
         #!/bin/sh
         # Clabar: forward Claude Code hook events to the menu bar app.
-        # Fire-and-forget: never blocks or fails the Claude session.
+        # curl runs in the FOREGROUND on purpose: Claude Code kills the hook's
+        # process group as soon as the script exits, so a backgrounded curl dies
+        # before it opens the connection. Non-blocking is provided by async:true
+        # in the hook registration; -m 3 caps the worst case.
         h="${CLABAR_HOST:-127.0.0.1}"
         p="${CLABAR_PORT:-\(port)}"
         curl -s -m 3 -X POST "http://$h:$p/event" \\
@@ -43,7 +46,7 @@ enum HookInstaller {
           -H "X-Clabar-Term: ${TERM_PROGRAM:-}" \\
           -H "X-Clabar-Bundle: ${__CFBundleIdentifier:-}" \\
           -H "X-Clabar-Remote: ${REMOTE_CONTAINERS:-}${CODESPACES:-}${CONTAINER:-}" \\
-          --data-binary @- >/dev/null 2>&1 &
+          --data-binary @- >/dev/null 2>&1
         exit 0
         """
     }
