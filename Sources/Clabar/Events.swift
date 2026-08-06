@@ -136,10 +136,9 @@ enum EventClassifier {
             }
             message = text
         case "SessionEnd":
-            let reason = payload["reason"] as? String ?? ""
-            guard reason == "other" else { return nil } // normal endings are noise
-            kind = .error
-            message = L("Сессия завершилась аварийно", "Session ended abnormally")
+            // reason "other" fires on plain quits too — no way to tell a crash
+            // from a normal exit, so SessionEnd is never surfaced.
+            return nil
         default:
             return nil
         }

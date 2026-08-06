@@ -39,7 +39,6 @@ subscriptions = [
     ("PermissionRequest", ""),
     ("PreToolUse", "AskUserQuestion|ExitPlanMode"),
     ("PostToolUseFailure", ""),
-    ("SessionEnd", ""),
 ]
 for event, matcher in subscriptions:
     groups = hooks.setdefault(event, [])

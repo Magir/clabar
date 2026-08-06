@@ -7,13 +7,14 @@ enum HookInstaller {
     static let defaultPort: UInt16 = 8737
 
     /// Events we subscribe to; matcher "" = all.
+    /// (SessionEnd deliberately absent: its reason "other" fires on normal
+    /// quits too, producing false "crashed" notifications.)
     static let subscriptions: [(event: String, matcher: String)] = [
         ("Notification", ""),
         ("Stop", ""),
         ("PermissionRequest", ""),
         ("PreToolUse", "AskUserQuestion|ExitPlanMode"),
         ("PostToolUseFailure", ""),
-        ("SessionEnd", ""),
     ]
 
     static var scriptURL: URL { scriptURL(in: ClabarPaths.claudeDir) }
@@ -119,6 +120,25 @@ enum HookInstaller {
             }
             groups.append(group)
             hooks[subscription.event] = groups
+            changed = true
+        }
+
+        // Drop our stale registrations for events we no longer subscribe to.
+        let subscribedEvents = Set(subscriptions.map(\.event))
+        for (event, value) in hooks where !subscribedEvents.contains(event) {
+            guard var groups = value as? [[String: Any]] else { continue }
+            let cleaned = groups.filter { group in
+                !((group["hooks"] as? [[String: Any]]) ?? []).contains {
+                    ($0["command"] as? String)?.contains(scriptMarker) == true
+                }
+            }
+            guard cleaned.count != groups.count else { continue }
+            groups = cleaned
+            if groups.isEmpty {
+                hooks.removeValue(forKey: event)
+            } else {
+                hooks[event] = groups
+            }
             changed = true
         }
 

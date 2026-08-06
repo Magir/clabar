@@ -29,6 +29,30 @@ struct ClabarApp: App {
     }
 }
 
+/// While a real window (history/settings) is open, the app behaves like a
+/// regular one — Dock icon, Cmd-Tab; back to menu-bar-only when all close.
+@MainActor
+enum DockPolicy {
+    private static var visibleCount = 0
+
+    /// Must be called BEFORE the window opens: flipping the activation policy
+    /// while a window is being presented makes it vanish.
+    static func prepareForWindow() {
+        NSApp.setActivationPolicy(.regular)
+    }
+
+    static func windowShown() {
+        visibleCount += 1
+    }
+
+    static func windowHidden() {
+        visibleCount = max(0, visibleCount - 1)
+        if visibleCount == 0 {
+            NSApp.setActivationPolicy(.accessory)
+        }
+    }
+}
+
 /// Open a window from the menu bar popover and bring it to front: open first
 /// (while the popover still holds activation), then activate the app so the
 /// new window lands on top instead of behind other apps. The popover itself
@@ -36,6 +60,7 @@ struct ClabarApp: App {
 /// from one of our real windows.
 @MainActor
 func presentFront(_ open: () -> Void) {
+    DockPolicy.prepareForWindow()
     let clickSource = NSApp.keyWindow
     open()
     let isRealWindow = ["settings", "log"].contains { id in
@@ -70,10 +95,17 @@ struct MenuBarLabel: View {
             if showBars {
                 Image(nsImage: renderIcon(rows: barRows))
             }
-            if !textPart.isEmpty {
-                Text(textPart)
+            if !pctPart.isEmpty {
+                Text(pctPart)
                     .font(.system(size: 12, weight: .medium).monospacedDigit())
             }
+            if showUnread, store.unreadCount > 0 {
+                Image(systemName: "envelope.fill")
+                Text("\(store.unreadCount)")
+                    .font(.system(size: 12, weight: .medium).monospacedDigit())
+            }
+            if !model.nudges.isEmpty { Text("🔥") }
+            if !model.lowWarnings.isEmpty { Text("⚠️") }
         }
         .task { await debugAutoOpen() }
     }
@@ -106,23 +138,14 @@ struct MenuBarLabel: View {
         return rows
     }
 
-    private var textPart: String {
-        var parts: [String] = []
-        if let response = usage.usage {
-            var pcts: [String] = []
-            if pct5h { pcts.append("\(Int(round(response.pct("five_hour") * 100)))") }
-            if pct7d { pcts.append("\(Int(round(response.pct("seven_day") * 100)))") }
-            if pctFable, let fable = response.modelBucket("fable") {
-                pcts.append("\(Int(round(fable.pct * 100)))")
-            }
-            if !pcts.isEmpty { parts.append(pcts.joined(separator: "·") + "%") }
+    private var pctPart: String {
+        guard let response = usage.usage else { return "" }
+        var pcts: [String] = []
+        if pct5h { pcts.append("\(Int(round(response.pct("five_hour") * 100)))") }
+        if pct7d { pcts.append("\(Int(round(response.pct("seven_day") * 100)))") }
+        if pctFable, let fable = response.modelBucket("fable") {
+            pcts.append("\(Int(round(fable.pct * 100)))")
         }
-        if showUnread {
-            let unread = store.unreadCount
-            if unread > 0 { parts.append("✉\(unread)") }
-        }
-        if !model.nudges.isEmpty { parts.append("🔥") }
-        if !model.lowWarnings.isEmpty { parts.append("⚠️") }
-        return parts.joined(separator: " ")
+        return pcts.isEmpty ? "" : pcts.joined(separator: "·") + "%"
     }
 }

@@ -34,7 +34,7 @@ First launch:
 
 ## How it works
 
-Claude Code hooks (`Notification`, `Stop`, `PermissionRequest`, `PreToolUse` for AskUserQuestion/ExitPlanMode, `PostToolUseFailure`, `SessionEnd`) invoke `~/.claude/hooks/clabar-hook.sh`, which POSTs the event JSON to `http://127.0.0.1:8737/event` (fire-and-forget — it never blocks or breaks the session). The app classifies the event, appends it to the log, and shows a banner.
+Claude Code hooks (`Notification`, `Stop`, `PermissionRequest`, `PreToolUse` for AskUserQuestion/ExitPlanMode, `PostToolUseFailure`) invoke `~/.claude/hooks/clabar-hook.sh`, which POSTs the event JSON to `http://127.0.0.1:8737/event` (fire-and-forget — it never blocks or breaks the session). The app classifies the event, appends it to the log, and shows a banner.
 
 ## DevContainers (VS Code)
 
@@ -89,8 +89,7 @@ If the image has no `python3`, add the hooks to the volume's `settings.json` man
   "Stop":               [{ "hooks": [{ "type": "command", "command": "sh \"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hooks/clabar-hook.sh\"", "async": true, "timeout": 5 }] }],
   "PermissionRequest":  [{ "hooks": [{ "type": "command", "command": "sh \"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hooks/clabar-hook.sh\"", "async": true, "timeout": 5 }] }],
   "PreToolUse":         [{ "matcher": "AskUserQuestion|ExitPlanMode", "hooks": [{ "type": "command", "command": "sh \"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hooks/clabar-hook.sh\"", "async": true, "timeout": 5 }] }],
-  "PostToolUseFailure": [{ "hooks": [{ "type": "command", "command": "sh \"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hooks/clabar-hook.sh\"", "async": true, "timeout": 5 }] }],
-  "SessionEnd":         [{ "hooks": [{ "type": "command", "command": "sh \"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hooks/clabar-hook.sh\"", "async": true, "timeout": 5 }] }]
+  "PostToolUseFailure": [{ "hooks": [{ "type": "command", "command": "sh \"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hooks/clabar-hook.sh\"", "async": true, "timeout": 5 }] }]
 }
 ```
 

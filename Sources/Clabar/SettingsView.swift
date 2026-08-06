@@ -145,6 +145,8 @@ struct SettingsView: View {
         .frame(width: 460, height: 660)
         .environment(\.locale, Lang.locale)
         .sheet(isPresented: $showSnippet) { snippetSheet }
+        .onAppear { DockPolicy.windowShown() }
+        .onDisappear { DockPolicy.windowHidden() }
     }
 
     private var snippetSheet: some View {

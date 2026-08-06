@@ -167,6 +167,22 @@ final class HookInstallerTests: XCTestCase {
         XCTAssertFalse(changedAgain)
         XCTAssertEqual((again["hooks"] as? [String: Any])?.count, (merged["hooks"] as? [String: Any])?.count)
     }
+
+    func testStaleClabarRegistrationsRemoved() {
+        // Simulates settings installed by an older version that subscribed to SessionEnd.
+        let existing: [String: Any] = [
+            "hooks": [
+                "SessionEnd": [
+                    ["hooks": [["type": "command", "command": HookInstaller.hookCommand]]],
+                    ["hooks": [["type": "command", "command": "echo bye"]]],
+                ]
+            ]
+        ]
+        let (merged, changed) = HookInstaller.mergedSettings(existing)
+        XCTAssertTrue(changed)
+        let sessionEnd = (merged["hooks"] as? [String: Any])?["SessionEnd"] as? [[String: Any]]
+        XCTAssertEqual(sessionEnd?.count, 1) // ours removed, foreign kept
+    }
 }
 
 final class DevcontainerPatchTests: XCTestCase {
@@ -302,12 +318,12 @@ final class EventClassifierTests: XCTestCase {
         ], headers: [:])
         XCTAssertEqual(failure?.kind, .error)
 
-        XCTAssertNil(EventClassifier.classify(payload: [
-            "hook_event_name": "SessionEnd", "reason": "clear",
-        ], headers: [:]))
-        XCTAssertEqual(EventClassifier.classify(payload: [
-            "hook_event_name": "SessionEnd", "reason": "other",
-        ], headers: [:])?.kind, .error)
+        // SessionEnd is never surfaced: reason "other" fires on normal quits too.
+        for reason in ["clear", "other", "logout"] {
+            XCTAssertNil(EventClassifier.classify(payload: [
+                "hook_event_name": "SessionEnd", "reason": reason,
+            ], headers: [:]))
+        }
     }
 
     func testRemoteFlagFromHeaders(){
