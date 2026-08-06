@@ -61,13 +61,13 @@ OLDER than local (stricter concurrency checks); a green local build does not
 guarantee CI. Never commit secrets: the Sparkle private key lives only in the
 GitHub secret and the owner's Keychain.
 
-GitHub Pages deployments are keyed by commit SHA and **idempotent**: re-running
-`deploy_appcast` for a SHA that already deployed once reports success but
-changes nothing. If a stale appcast is being served (e.g. a cancelled run's
-server-side deployment landed late and overwrote a newer one — this has
-happened), the only reliable republish is a NEW tag (new SHA). Verify with
-`curl -s "https://magir.github.io/clabar/appcast.xml?cb=$RANDOM"` — the CDN
-caches for 10 minutes.
+GitHub Pages serving gotchas (both bit us):
+- A cancelled run's server-side Pages deployment can land LATE and overwrite a
+  newer successful one. Re-running just the `deploy_appcast` job of the good
+  run fixes it.
+- The Pages CDN caches for ~10 minutes and IGNORES query strings — `?cb=...`
+  does NOT bust the cache. After any appcast deploy, wait out the TTL before
+  concluding it failed; check `last-modified`/`age` response headers instead.
 
 ## Architecture
 
