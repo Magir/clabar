@@ -102,6 +102,8 @@ struct PopoverView: View {
             Button("Войти через Claude") { usage.startOAuthFlow() }
                 .buttonStyle(.borderedProminent)
                 .frame(maxWidth: .infinity)
+            Text("Вход нужен только для лимитов — уведомления, история и настройки работают и без него.")
+                .font(.caption2).foregroundStyle(.tertiary)
         }
     }
 
@@ -137,10 +139,18 @@ struct PopoverView: View {
 
     private var footer: some View {
         HStack(spacing: 12) {
-            Button("История…") { openWindow(id: "log") }
-                .buttonStyle(.borderless).font(.caption)
-            Button("Настройки…") { openSettings() }
-                .buttonStyle(.borderless).font(.caption)
+            Button("История…") {
+                // LSUIElement app: without activation the window opens behind
+                // everything and looks like the click did nothing.
+                NSApp.activate(ignoringOtherApps: true)
+                openWindow(id: "log")
+            }
+            .buttonStyle(.borderless).font(.caption)
+            Button("Настройки…") {
+                NSApp.activate(ignoringOtherApps: true)
+                openSettings()
+            }
+            .buttonStyle(.borderless).font(.caption)
             Spacer()
             Button("Обновить") { Task { await usage.fetchUsage() } }
                 .buttonStyle(.borderless).font(.caption)

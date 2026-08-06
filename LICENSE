@@ -1,6 +1,6 @@
 BSD 2-Clause License
 
-Copyright (c) 2026, Ivan Magir
+Copyright (c) 2026, Ivan Boitsov
 Portions copyright (c) 2026, Krystian (Blimp-Labs/claude-usage-bar) —
 the usage-tracking core (OAuth flow, usage models, history/chart) is
 derived from https://github.com/Blimp-Labs/claude-usage-bar (BSD-2-Clause).
