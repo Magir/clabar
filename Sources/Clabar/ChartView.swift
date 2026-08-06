@@ -36,6 +36,9 @@ struct UsageChartView: View {
             }
             .pickerStyle(.segmented)
             .labelsHidden()
+            // The bridged NSSegmentedControl caches segment titles — force a
+            // rebuild when the language flips, or labels stay in the old one.
+            .id("range-picker-\(Lang.isRu)")
 
             let points = historyService.downsampledPoints(for: selectedRange)
             if points.isEmpty {
