@@ -50,6 +50,48 @@ open build/Clabar.app
 
 Если в проекте уже задан свой `CLAUDE_CONFIG_DIR`, Clabar его не трогает: добавляет только `CLABAR_HOST`, а хуки ставит прямо в тот конфиг — когда его хостовый путь удаётся вычислить (папка внутри workspace или объявленный bind-маунт). Существующие `mounts` (в том числе объектные) сохраняются.
 
+### Кастомный DevContainer (конфиг Claude на named volume)
+
+Если `.claude` в контейнере живёт на docker-томе (named volume) и заменить его на локальную папку нельзя, Clabar с хоста в этот том не попадёт — хуки нужно ставить **изнутри контейнера**. Clabar'у от контейнера нужно всего три вещи:
+
+1. хук-скрипт и его регистрация в `settings.json` того конфига, который реально использует Claude Code в контейнере (`$CLAUDE_CONFIG_DIR`, по умолчанию `~/.claude`);
+2. переменная `CLABAR_HOST=host.docker.internal`, чтобы события уходили на хост;
+3. `curl` в образе.
+
+Пошагово:
+
+1. Скопируйте [`extras/clabar-container-setup.sh`](extras/clabar-container-setup.sh) из этого репозитория в `.devcontainer/` вашего проекта. Скрипт идемпотентен: пишет `hooks/clabar-hook.sh` и аккуратно домердживает регистрацию хуков в `settings.json`, не трогая ваши существующие хуки (нужен `python3` в образе — есть почти во всех devcontainer-образах).
+
+2. В `devcontainer.json` добавьте:
+
+   ```jsonc
+   "containerEnv": {
+     "CLABAR_HOST": "host.docker.internal"
+   },
+   "postStartCommand": "sh .devcontainer/clabar-container-setup.sh"
+   ```
+
+   `postStartCommand` (а не `postCreateCommand`) — чтобы установка самовосстанавливалась при каждом старте: том переживает пересборки, а вот чистый `settings.json` после `claude logout`/сброса — нет.
+
+3. Пересоберите контейнер (**Dev Containers: Rebuild Container**). В логе старта появится `Clabar hooks installed into …`.
+
+Проверка изнутри контейнера: `curl -s -m 2 http://host.docker.internal:8737/ping` должен ответить `clabar`. Если нет — на Docker Desktop это работает из коробки, а на «голом» Docker/colima добавьте в `devcontainer.json` `"runArgs": ["--add-host=host.docker.internal:host-gateway"]`.
+
+Если `python3` в образе нет, впишите хуки в `settings.json` тома один раз вручную (скрипт `clabar-hook.sh` создайте тем же heredoc'ом из `clabar-container-setup.sh`):
+
+```json
+"hooks": {
+  "Notification":       [{ "hooks": [{ "type": "command", "command": "sh \"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hooks/clabar-hook.sh\"", "async": true, "timeout": 5 }] }],
+  "Stop":               [{ "hooks": [{ "type": "command", "command": "sh \"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hooks/clabar-hook.sh\"", "async": true, "timeout": 5 }] }],
+  "PermissionRequest":  [{ "hooks": [{ "type": "command", "command": "sh \"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hooks/clabar-hook.sh\"", "async": true, "timeout": 5 }] }],
+  "PreToolUse":         [{ "matcher": "AskUserQuestion|ExitPlanMode", "hooks": [{ "type": "command", "command": "sh \"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hooks/clabar-hook.sh\"", "async": true, "timeout": 5 }] }],
+  "PostToolUseFailure": [{ "hooks": [{ "type": "command", "command": "sh \"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hooks/clabar-hook.sh\"", "async": true, "timeout": 5 }] }],
+  "SessionEnd":         [{ "hooks": [{ "type": "command", "command": "sh \"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hooks/clabar-hook.sh\"", "async": true, "timeout": 5 }] }]
+}
+```
+
+Нюанс: в этой схеме уведомления с лимитами работают полностью, но настройки/логин Claude в томе живут своей жизнью и с хостом не синхронизируются — это свойство named volume, Clabar тут ничего не меняет.
+
 ## Где лежат данные
 
 | Что | Где |
