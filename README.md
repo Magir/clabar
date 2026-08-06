@@ -1,12 +1,13 @@
-<img src="docs/icon.png" width="110" align="left" alt="Clabar icon">
-
-# Clabar
-
-macOS menu bar app for Claude: usage limits at a glance + native notifications from Claude Code sessions.
-
-<a href="https://buymeacoffee.com/magir" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" height="41" width="174"></a>
-
-<br clear="left">
+<table border="0">
+<tr>
+<td width="130" align="center"><img src="docs/icon.png" width="120" alt="Clabar icon"></td>
+<td>
+<h1>Clabar</h1>
+<p>macOS menu bar app for Claude: usage limits at a glance + native notifications from Claude Code sessions.</p>
+<p><a href="https://buymeacoffee.com/magir" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" height="41" width="174"></a></p>
+</td>
+</tr>
+</table>
 
 <p align="center">
   <img src="docs/menubar.png" alt="Clabar in the menu bar: usage bars, unread counter, burn-the-limit flame" width="200">
