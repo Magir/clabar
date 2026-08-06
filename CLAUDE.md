@@ -113,6 +113,10 @@ Files (Sources/Clabar/):
 - **MenuBarExtra label**: only the first standalone `Image` renders; icons must
   be embedded into `Text` (`Text(Image(systemName:))`). Plain unicode glyphs
   like ✉ may have no glyph in the menu bar font (renders as ✖).
+- **MenuBarExtra(.window) panel drifts downward**: the panel anchors its BOTTOM
+  edge, so every content-height change lets the top sag further below the menu
+  bar. `MenuBarPanelSnapper` (NSViewRepresentable in PopoverView) re-pins the
+  top on each render — keep it attached to the popover root.
 - **Window presentation from the popover**: use `presentFront {}` — it flips the
   activation policy BEFORE opening (flipping after makes the window vanish),
   opens, closes the popover, then activates. The `Settings` scene is unusable in

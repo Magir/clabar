@@ -43,6 +43,10 @@ struct PopoverView: View {
         .padding(12)
         .frame(width: 360)
         .environment(\.locale, Lang.locale)
+        // MenuBarExtra(.window) anchors the panel's BOTTOM edge: every content
+        // height change lets the top edge sag further below the menu bar.
+        // Re-pin the top on each appearance/re-render.
+        .background(MenuBarPanelSnapper())
     }
 
     private var header: some View {
@@ -203,6 +207,29 @@ struct PopoverView: View {
                 .buttonStyle(.borderless).font(.caption)
             Button(L("Закрыть", "Quit")) { ClabarAppDelegate.quit() }
                 .buttonStyle(.borderless).font(.caption).foregroundStyle(.secondary)
+        }
+    }
+}
+
+/// Grabs the hosting NSWindow (the MenuBarExtra panel) and snaps its top edge
+/// back under the menu bar — SwiftUI itself never re-anchors it.
+private struct MenuBarPanelSnapper: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        DispatchQueue.main.async { Self.snap(view.window) }
+        return view
+    }
+
+    func updateNSView(_ view: NSView, context: Context) {
+        DispatchQueue.main.async { Self.snap(view.window) }
+    }
+
+    private static func snap(_ window: NSWindow?) {
+        guard let window, window.isVisible,
+              let screen = window.screen ?? NSScreen.main else { return }
+        let targetTop = screen.visibleFrame.maxY
+        if abs(window.frame.maxY - targetTop) > 1 {
+            window.setFrameTopLeftPoint(NSPoint(x: window.frame.origin.x, y: targetTop))
         }
     }
 }
