@@ -1,41 +1,44 @@
 # Clabar
 
-Меню-бар приложение для macOS: лимиты Claude + уведомления от Claude Code.
-Ядро отслеживания лимитов взято из [claude-usage-bar](https://github.com/Blimp-Labs/claude-usage-bar) (BSD-2-Clause), слой уведомлений — свой (идея из [треда на r/ClaudeAI](https://www.reddit.com/r/ClaudeAI/comments/1puwxie/)).
+macOS menu bar app for Claude: usage limits at a glance + native notifications from Claude Code sessions.
 
-## Возможности
+The usage-tracking core is derived from [claude-usage-bar](https://github.com/Blimp-Labs/claude-usage-bar) (BSD-2-Clause), extended with a notification pipeline built on [Claude Code hooks](https://code.claude.com/docs/en/hooks).
 
-- **Иконка в меню-баре** с выпадающей панелью. Настраивается: мини-полоски, проценты текстом (5ч / неделя / Fable), счётчик непрочитанных, 🔥 при «сгорающем» лимите.
-- **Лимиты**: 5-часовое окно, недельное, Fable/Opus/Sonnet и любые новые бакеты API подхватываются автоматически. График истории (1ч–30д).
-- **Уведомления от Claude Code** через хуки: запросы (permission, вопросы, план готов), завершение работы, сбои — с разными иконками. Системные баннеры; у запросов кнопки «⏎ Разрешить / ⎋ Отклонить / Открыть». Клик ведёт в приложение с сессией (VS Code — с открытием нужной папки).
-- **Журнал уведомлений**: отдельное окно («История…»), таблица с сортировкой и фильтрами по типу / непрочитанным / тексту. Двойной клик — переход в сессию.
-- **Nudge «сожги лимит»**: если использовано меньше N% общего недельного окна, а до сброса меньше M часов — 🔥 в иконке и баннер в панели.
-- **Предупреждение «лимит кончается»**: обратная сторона — когда любое окно (5 часов, неделя, Fable…) израсходовано выше порога (по умолчанию 85%), ⚠️ в иконке и красный баннер. Порог настраивается.
-- **Автонастройка**: хуки ставятся сами при первом запуске. Кнопка настройки DevContainer.
-- **Локализация**: русский/английский — автоматически по языку системы, принудительный выбор в настройках.
+## Features
 
-## Сборка и запуск
+- **Menu bar icon with a popover.** Customizable: mini usage bars, percentages as text (5-hour / weekly / Fable), unread notifications counter, 🔥/⚠️ status markers.
+- **Usage limits**: the 5-hour window, the weekly window, and any per-model windows (Fable, Opus, …) the API reports — new limit types show up automatically. Usage history chart (1h–30d ranges).
+- **Notifications from Claude Code** via hooks: asks (permission requests, questions, plan ready), task completion, failures — each with its own icon. System banners with action buttons on asks (Allow / Deny / Open). Clicking jumps to the app hosting the session (VS Code opens the right folder).
+- **Notification history**: a separate window with a sortable table, filters by type / unread / free-text search. Double-click opens the session.
+- **“Burn the limit” reminder**: when less than N% of the weekly window is used and the reset is under M hours away — 🔥 in the icon and a banner in the popover.
+- **“Running low” warning**: the reverse — when any window (5-hour, weekly, per-model) is above a configurable threshold (85% by default), ⚠️ in the icon and a red banner.
+- **Zero-config setup**: hooks are installed automatically on first launch. One-click DevContainer setup.
+- **Localization**: English / Russian, auto-detected from the system with a manual override in Settings.
+
+## Build & run
+
+Requires macOS 14+ and Xcode (or Command Line Tools with Swift 5.9+).
 
 ```sh
-make app          # соберёт build/Clabar.app (нужен Xcode / CLT)
+make app          # builds build/Clabar.app
 open build/Clabar.app
-# по желанию: cp -R build/Clabar.app /Applications/
+# optionally: cp -R build/Clabar.app /Applications/
 ```
 
-Первый запуск:
+First launch:
 
-1. Разрешите **уведомления** (системный запрос).
-2. В панели нажмите **«Войти через Claude»** — OAuth в браузере, вставьте код.
-3. Хуки в `~/.claude/settings.json` поставятся автоматически (бэкап: `settings.json.clabar-backup`).
-4. Для кнопок «Разрешить/Отклонить» клавишами включите опцию в настройках и выдайте Clabar право **Универсальный доступ** (Accessibility). По умолчанию выключено — кнопки просто фокусируют сессию.
+1. Allow **notifications** when prompted.
+2. Click **“Sign in with Claude”** in the popover — OAuth in the browser, paste the code back.
+3. Hooks are installed into `~/.claude/settings.json` automatically (backup: `settings.json.clabar-backup`).
+4. For the experimental keystroke answers (⏎ Allow / ⎋ Deny actually pressing keys in the session), enable the option in Settings and grant Clabar the **Accessibility** permission. Off by default — the buttons just focus the session.
 
-## Как это работает
+## How it works
 
-Хуки Claude Code (`Notification`, `Stop`, `PermissionRequest`, `PreToolUse` для AskUserQuestion/ExitPlanMode, `PostToolUseFailure`, `SessionEnd`) вызывают `~/.claude/hooks/clabar-hook.sh`, который отправляет JSON события на `http://127.0.0.1:8737/event` (fire-and-forget, сессию не блокирует и не ломает). Приложение классифицирует событие, пишет в журнал и показывает баннер.
+Claude Code hooks (`Notification`, `Stop`, `PermissionRequest`, `PreToolUse` for AskUserQuestion/ExitPlanMode, `PostToolUseFailure`, `SessionEnd`) invoke `~/.claude/hooks/clabar-hook.sh`, which POSTs the event JSON to `http://127.0.0.1:8737/event` (fire-and-forget — it never blocks or breaks the session). The app classifies the event, appends it to the log, and shows a banner.
 
 ## DevContainers (VS Code)
 
-Настройки → Интеграция → **«Настроить проект…»** патчит `devcontainer.json`:
+Settings → Integration → **“Set up a project…”** patches the project's `devcontainer.json`:
 
 ```jsonc
 "mounts": [
@@ -47,23 +50,23 @@ open build/Clabar.app
 }
 ```
 
-Хостовый `~/.claude` монтируется в контейнер, `CLAUDE_CONFIG_DIR` заставляет Claude Code использовать его — настройки, хуки и логин едут в контейнер и обратно автоматически. Уведомления из контейнера идут на хост через `host.docker.internal` (Docker Desktop). Если в `devcontainer.json` есть комментарии, приложение не переписывает файл, а показывает сниппет для ручной вставки. После патча пересоберите контейнер. В контейнере нужен `curl` (есть почти везде).
+The host `~/.claude` is mounted into the container and `CLAUDE_CONFIG_DIR` makes Claude Code use it — settings, hooks and login travel both ways automatically. Notifications from the container reach the host via `host.docker.internal` (Docker Desktop). If `devcontainer.json` contains comments, the file is not rewritten — a snippet is shown for manual pasting. Rebuild the container after patching. The container needs `curl` (present almost everywhere).
 
-Если в проекте уже задан свой `CLAUDE_CONFIG_DIR`, Clabar его не трогает: добавляет только `CLABAR_HOST`, а хуки ставит прямо в тот конфиг — когда его хостовый путь удаётся вычислить (папка внутри workspace или объявленный bind-маунт). Существующие `mounts` (в том числе объектные) сохраняются.
+If the project already sets its own `CLAUDE_CONFIG_DIR`, Clabar keeps it: only `CLABAR_HOST` is added, and the hooks are installed directly into that config when its host path can be resolved (a folder inside the workspace, or a declared bind mount). Existing `mounts` (including object entries) are preserved.
 
-### Кастомный DevContainer (конфиг Claude на named volume)
+### Custom DevContainer (Claude config on a named volume)
 
-Если `.claude` в контейнере живёт на docker-томе (named volume) и заменить его на локальную папку нельзя, Clabar с хоста в этот том не попадёт — хуки нужно ставить **изнутри контейнера**. Clabar'у от контейнера нужно всего три вещи:
+If the container's `.claude` lives on a docker named volume and can't be replaced with a bind mount, Clabar can't reach it from the host — install the hooks **from inside the container**. The container needs three things:
 
-1. хук-скрипт и его регистрация в `settings.json` того конфига, который реально использует Claude Code в контейнере (`$CLAUDE_CONFIG_DIR`, по умолчанию `~/.claude`);
-2. переменная `CLABAR_HOST=host.docker.internal`, чтобы события уходили на хост;
-3. `curl` в образе.
+1. the hook script and its registration in the `settings.json` of whatever config Claude Code actually uses in the container (`$CLAUDE_CONFIG_DIR`, `~/.claude` by default);
+2. `CLABAR_HOST=host.docker.internal` so events reach the host;
+3. `curl` in the image.
 
-Пошагово:
+Step by step:
 
-1. Скопируйте [`extras/clabar-container-setup.sh`](extras/clabar-container-setup.sh) из этого репозитория в `.devcontainer/` вашего проекта. Скрипт идемпотентен: пишет `hooks/clabar-hook.sh` и аккуратно домердживает регистрацию хуков в `settings.json`, не трогая ваши существующие хуки (нужен `python3` в образе — есть почти во всех devcontainer-образах).
+1. Copy [`extras/clabar-container-setup.sh`](extras/clabar-container-setup.sh) into your project's `.devcontainer/`. The script is idempotent: it writes `hooks/clabar-hook.sh` and carefully merges the hook registration into `settings.json` without touching your existing hooks (needs `python3` in the image — present in nearly all devcontainer images).
 
-2. В `devcontainer.json` добавьте:
+2. Add to `devcontainer.json`:
 
    ```jsonc
    "containerEnv": {
@@ -72,13 +75,13 @@ open build/Clabar.app
    "postStartCommand": "sh .devcontainer/clabar-container-setup.sh"
    ```
 
-   `postStartCommand` (а не `postCreateCommand`) — чтобы установка самовосстанавливалась при каждом старте: том переживает пересборки, а вот чистый `settings.json` после `claude logout`/сброса — нет.
+   `postStartCommand` (not `postCreateCommand`) makes the setup self-healing on every start: the volume survives rebuilds, but a fresh `settings.json` after `claude logout`/reset doesn't.
 
-3. Пересоберите контейнер (**Dev Containers: Rebuild Container**). В логе старта появится `Clabar hooks installed into …`.
+3. Rebuild the container (**Dev Containers: Rebuild Container**). The startup log will show `Clabar hooks installed into …`.
 
-Проверка изнутри контейнера: `curl -s -m 2 http://host.docker.internal:8737/ping` должен ответить `clabar`. Если нет — на Docker Desktop это работает из коробки, а на «голом» Docker/colima добавьте в `devcontainer.json` `"runArgs": ["--add-host=host.docker.internal:host-gateway"]`.
+Check from inside the container: `curl -s -m 2 http://host.docker.internal:8737/ping` should answer `clabar`. On Docker Desktop this works out of the box; on plain Docker/colima add `"runArgs": ["--add-host=host.docker.internal:host-gateway"]`.
 
-Если `python3` в образе нет, впишите хуки в `settings.json` тома один раз вручную (скрипт `clabar-hook.sh` создайте тем же heredoc'ом из `clabar-container-setup.sh`):
+If the image has no `python3`, add the hooks to the volume's `settings.json` manually once (create `clabar-hook.sh` with the same heredoc from `clabar-container-setup.sh`):
 
 ```json
 "hooks": {
@@ -91,28 +94,32 @@ open build/Clabar.app
 }
 ```
 
-Нюанс: в этой схеме уведомления с лимитами работают полностью, но настройки/логин Claude в томе живут своей жизнью и с хостом не синхронизируются — это свойство named volume, Clabar тут ничего не меняет.
+Note: with a named volume, notifications and limits work fully, but the Claude login/settings inside the volume are not synced with the host — that's a property of named volumes, not something Clabar changes.
 
-## Где лежат данные
+## Data locations
 
-| Что | Где |
+| What | Where |
 |---|---|
-| OAuth-токены | `~/.config/clabar/credentials.json` (0600) |
-| История лимитов | `~/.config/clabar/history.json` (30 дней) |
-| Журнал уведомлений | `~/.config/clabar/notifications.json` (последние 2000) |
-| Хук-скрипт | `~/.claude/hooks/clabar-hook.sh` |
+| OAuth tokens | `~/.config/clabar/credentials.json` (0600) |
+| Usage history | `~/.config/clabar/history.json` (30 days) |
+| Notification log | `~/.config/clabar/notifications.json` (last 2000) |
+| Hook script | `~/.claude/hooks/clabar-hook.sh` |
 
-Наружу данные не уходят — только запросы к API Anthropic за лимитами.
+Nothing leaves your machine except the usage requests to the Anthropic API.
 
-## Переменные окружения
+## Environment variables
 
-- `CLABAR_DATA_DIR` — переопределить папку данных приложения.
-- `CLABAR_NO_AUTOINSTALL=1` — не ставить хуки автоматически.
-- `CLABAR_HOST` / `CLABAR_PORT` — куда хук-скрипт шлёт события (для контейнеров/нестандартного порта).
+- `CLABAR_DATA_DIR` — override the app data directory.
+- `CLABAR_NO_AUTOINSTALL=1` — don't install hooks automatically.
+- `CLABAR_HOST` / `CLABAR_PORT` — where the hook script sends events (containers / non-default port).
 
-## Разработка
+## Development
 
 ```sh
-swift test   # юнит-тесты (парсинг бакетов, nudge, merge хуков, классификация, dedupe)
-make app     # релизная сборка .app
+swift test   # unit tests (bucket parsing, nudges, hook merging, classification, dedupe)
+make app     # release .app build
 ```
+
+## License
+
+BSD 2-Clause — see [LICENSE](LICENSE). Portions derived from [claude-usage-bar](https://github.com/Blimp-Labs/claude-usage-bar) (BSD-2-Clause), original license reproduced in the LICENSE file.
