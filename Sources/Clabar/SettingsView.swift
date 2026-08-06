@@ -112,7 +112,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 460)
+        .frame(width: 460, height: 640)
         .sheet(isPresented: $showSnippet) { snippetSheet }
     }
 

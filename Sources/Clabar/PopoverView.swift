@@ -5,7 +5,6 @@ struct PopoverView: View {
     @ObservedObject var usage: UsageService
     @ObservedObject var store: EventStore
     @Environment(\.openWindow) private var openWindow
-    @Environment(\.openSettings) private var openSettings
 
     init(model: AppModel) {
         self.model = model
@@ -139,18 +138,10 @@ struct PopoverView: View {
 
     private var footer: some View {
         HStack(spacing: 12) {
-            Button("История…") {
-                // LSUIElement app: without activation the window opens behind
-                // everything and looks like the click did nothing.
-                NSApp.activate(ignoringOtherApps: true)
-                openWindow(id: "log")
-            }
-            .buttonStyle(.borderless).font(.caption)
-            Button("Настройки…") {
-                NSApp.activate(ignoringOtherApps: true)
-                openSettings()
-            }
-            .buttonStyle(.borderless).font(.caption)
+            Button("История…") { presentFront { openWindow(id: "log") } }
+                .buttonStyle(.borderless).font(.caption)
+            Button("Настройки…") { presentFront { openWindow(id: "settings") } }
+                .buttonStyle(.borderless).font(.caption)
             Spacer()
             Button("Обновить") { Task { await usage.fetchUsage() } }
                 .buttonStyle(.borderless).font(.caption)

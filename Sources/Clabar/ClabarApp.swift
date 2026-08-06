@@ -18,10 +18,24 @@ struct ClabarApp: App {
         }
         .defaultSize(width: 820, height: 480)
 
-        Settings {
+        // A plain Window instead of the Settings scene: LSUIElement apps have no
+        // menu bar entry anyway, and Settings silently no-ops when the app is
+        // inactive (popover click) — a Window opened via presentFront is reliable.
+        Window("Настройки Clabar", id: "settings") {
             SettingsView(model: model)
         }
         .windowResizability(.contentSize)
+    }
+}
+
+/// Open a window from the menu bar popover and bring it to front: open first
+/// (while the popover still holds activation), then activate the app so the
+/// new window lands on top instead of behind other apps.
+@MainActor
+func presentFront(_ open: () -> Void) {
+    open()
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+        NSApp.activate(ignoringOtherApps: true)
     }
 }
 
@@ -29,6 +43,7 @@ struct MenuBarLabel: View {
     @ObservedObject var model: AppModel
     @ObservedObject var usage: UsageService
     @ObservedObject var store: EventStore
+    @Environment(\.openWindow) private var openWindow
 
     @AppStorage(SettingsKeys.iconShowBars) private var showBars = true
     @AppStorage(SettingsKeys.iconShowUnread) private var showUnread = true
@@ -52,6 +67,21 @@ struct MenuBarLabel: View {
                     .font(.system(size: 12, weight: .medium).monospacedDigit())
             }
         }
+        .task { await debugAutoOpen() }
+    }
+
+    /// CLABAR_DEBUG_OPEN=<window id>: open the window at launch and dump its
+    /// state to stdout — lets automated runs verify windows come to front.
+    private func debugAutoOpen() async {
+        guard let target = ProcessInfo.processInfo.environment["CLABAR_DEBUG_OPEN"] else { return }
+        try? await Task.sleep(for: .seconds(1))
+        presentFront { openWindow(id: target) }
+        try? await Task.sleep(for: .seconds(1))
+        var lines = NSApp.windows.map {
+            "clabar-debug window='\($0.title)' visible=\($0.isVisible) key=\($0.isKeyWindow)"
+        }
+        lines.append("clabar-debug appActive=\(NSApp.isActive)")
+        FileHandle.standardError.write(Data((lines.joined(separator: "\n") + "\n").utf8))
     }
 
     private var barRows: [IconRow] {
