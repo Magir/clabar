@@ -47,7 +47,9 @@ signs and publishes `appcast.xml` to GitHub Pages (Sparkle auto-updates).
 Requires repo variable `SPARKLE_PUBLIC_KEY` + secret `SPARKLE_PRIVATE_KEY`;
 if missing, the release still publishes but without auto-updates (warning).
 README's install link `releases/latest/download/Clabar.zip` always serves the
-newest release. To move a tag: delete it on the remote first
+newest release; `install.sh` (curl one-liner in README) installs without
+Gatekeeper friction — curl-downloaded files carry no quarantine attribute,
+browser downloads do. To move a tag: delete it on the remote first
 (`git push origin :refs/tags/vX.Y.Z`), then re-tag and push.
 
 `build.yml` runs `swift build && swift test` on every push — CI Swift is

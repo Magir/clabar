@@ -6,7 +6,15 @@ The usage-tracking core is derived from [claude-usage-bar](https://github.com/Bl
 
 ## Install
 
-**[Download the latest Clabar.zip](https://github.com/Magir/clabar/releases/latest/download/Clabar.zip)** — unzip, drop `Clabar.app` into `/Applications`, and on first launch right-click → **Open** (the build is not notarized). Release builds update themselves via Sparkle. Or build from source — see below.
+Recommended — one line in Terminal (installs to `/Applications` and launches):
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/Magir/clabar/main/install.sh | sh
+```
+
+The builds are not notarized, and curl-downloaded files carry no quarantine attribute — this way macOS opens the app without the “unverified developer” friction. Subsequent updates arrive in-app via Sparkle.
+
+Alternatively, [download Clabar.zip](https://github.com/Magir/clabar/releases/latest/download/Clabar.zip) in the browser — but then macOS will complain on first launch: allow it via System Settings → Privacy & Security → **Open Anyway**. Or build from source — see below.
 
 ## Features
 
