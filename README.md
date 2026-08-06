@@ -1,13 +1,16 @@
-<p align="center">
-  <img src="docs/icon.png" width="128" alt="Clabar icon">
-</p>
+<img src="docs/icon.png" width="110" align="left" alt="Clabar icon">
 
 # Clabar
 
 macOS menu bar app for Claude: usage limits at a glance + native notifications from Claude Code sessions.
 
+<br clear="left">
+
 <p align="center">
   <img src="docs/menubar.png" alt="Clabar in the menu bar: usage bars, unread counter, burn-the-limit flame" width="200">
+</p>
+<p align="center">
+  <img src="docs/popover.png" alt="Clabar popover: limits, usage chart, notifications with Allow/Deny buttons" width="400">
 </p>
 
 The usage-tracking core is derived from [claude-usage-bar](https://github.com/Blimp-Labs/claude-usage-bar) (BSD-2-Clause), extended with a notification pipeline built on [Claude Code hooks](https://code.claude.com/docs/en/hooks).

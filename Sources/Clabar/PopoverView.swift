@@ -43,7 +43,12 @@ struct PopoverView: View {
     }
 
     private var header: some View {
-        HStack {
+        HStack(spacing: 6) {
+            // With CFBundleIconFile set this is our AppIcon; generic app icon
+            // under `swift run` where there is no bundle.
+            Image(nsImage: NSImage(named: NSImage.applicationIconName) ?? NSImage())
+                .resizable()
+                .frame(width: 19, height: 19)
             Text("Clabar").font(.headline)
             Spacer()
             if let email = usage.accountEmail {
