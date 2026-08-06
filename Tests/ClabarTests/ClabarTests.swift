@@ -185,6 +185,55 @@ final class HookInstallerTests: XCTestCase {
     }
 }
 
+final class LocalizationTests: XCTestCase {
+    override func tearDown() {
+        UserDefaults.standard.removeObject(forKey: Lang.defaultsKey)
+    }
+
+    private func setLang(_ code: String) {
+        UserDefaults.standard.set(code, forKey: Lang.defaultsKey)
+    }
+
+    func testInlinePairAndLookupLanguages() {
+        setLang("ru")
+        XCTAssertEqual(L("Готово", "Done"), "Готово")
+        setLang("en")
+        XCTAssertEqual(L("Готово", "Done"), "Done")
+        setLang("es")
+        XCTAssertEqual(L("Готово", "Done"), "Listo")
+        setLang("de")
+        XCTAssertEqual(L("Сбой", "Failure"), "Fehler")
+        setLang("uk")
+        XCTAssertEqual(L("Запрос", "Ask"), "Запит")
+    }
+
+    func testMissingKeyFallsBackToEnglish() {
+        setLang("fr")
+        XCTAssertEqual(L("нет такого", "no such key in the table"), "no such key in the table")
+    }
+
+    func testTemplateSubstitution() {
+        setLang("pt")
+        XCTAssertEqual(
+            LT("Если использовано меньше {n}%", "If less than {n}% used", ["n": "40"]),
+            "Se menos de 40% foi usado"
+        )
+        setLang("ru")
+        XCTAssertEqual(
+            LT("Если использовано меньше {n}%", "If less than {n}% used", ["n": "40"]),
+            "Если использовано меньше 40%"
+        )
+    }
+
+    func testEveryTranslationCoversAllLanguages() {
+        for (key, entry) in Translations.table {
+            for code in ["es", "pt", "fr", "de", "uk"] {
+                XCTAssertNotNil(entry[code], "Missing \(code) for key: \(key)")
+            }
+        }
+    }
+}
+
 final class DevcontainerPatchTests: XCTestCase {
     private var projectURL: URL!
 

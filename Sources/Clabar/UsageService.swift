@@ -199,7 +199,7 @@ final class UsageService: ObservableObject {
             if http.statusCode == 429 {
                 let retryAfter = http.value(forHTTPHeaderField: "Retry-After").flatMap(Double.init) ?? currentInterval
                 currentInterval = min(max(retryAfter, currentInterval * 2), Self.maxBackoffInterval)
-                lastError = L("Rate limit — интервал увеличен до \(Int(currentInterval))с", "Rate limited — backing off to \(Int(currentInterval))s")
+                lastError = LT("Rate limit — интервал увеличен до {s}с", "Rate limited — backing off to {s}s", ["s": "\(Int(currentInterval))"])
                 scheduleTimer()
                 return
             }

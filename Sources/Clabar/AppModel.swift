@@ -87,7 +87,7 @@ final class AppModel: ObservableObject {
             server = newServer
             serverError = nil
         } catch {
-            serverError = L("Не удалось открыть порт \(serverPort): ", "Failed to open port \(serverPort): ") + error.localizedDescription
+            serverError = LT("Не удалось открыть порт {port}: ", "Failed to open port {port}: ", ["port": "\(serverPort)"]) + error.localizedDescription
         }
     }
 

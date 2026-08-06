@@ -117,10 +117,18 @@ Files (Sources/Clabar/):
   activation policy BEFORE opening (flipping after makes the window vanish),
   opens, closes the popover, then activates. The `Settings` scene is unusable in
   an LSUIElement app (silently no-ops) — settings is a plain `Window`.
-- **Localization**: every view calling `L()` must hold
-  `@ObservedObject private var lang = LangObserver.shared` or it won't re-render
-  on language switch; date/number formatting needs
-  `.environment(\.locale, Lang.locale)` at the window root.
+- **Localization** (7 languages): call sites carry the ru/en pair inline —
+  `L("ру", "en")`; es/pt/fr/de/uk live in `Translations.table` keyed by the
+  EXACT English string (missing key → English fallback, so adding a string
+  without a table entry degrades gracefully). Parameterized strings use
+  `LT("… {n} …", "… {n} …", ["n": value])` with `{placeholder}` keys in the
+  table. A test asserts every table entry covers all five languages. Every
+  view calling `L()` must hold
+  `@ObservedObject private var lang = LangObserver.shared` or it won't
+  re-render on language switch; date/number formatting needs
+  `.environment(\.locale, Lang.locale)` at the window root; segmented
+  pickers additionally need `.id(...)` keyed on the language (NSSegmentedControl
+  caches titles); window titles must come from content-level `.navigationTitle`.
 - **devcontainer.json** may be JSONC (comments → show snippet, never rewrite)
   and `mounts` entries may be objects, not strings — treat as `[Any]`. Existing
   `CLAUDE_CONFIG_DIR` is respected: hooks go into that dir when its host path

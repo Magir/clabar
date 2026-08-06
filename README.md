@@ -12,9 +12,6 @@
 <p align="center">
   <img src="docs/menubar.png" alt="Clabar in the menu bar: usage bars, unread counter, burn-the-limit flame" width="200">
 </p>
-<p align="center">
-  <img src="docs/popover.png" alt="Clabar popover: limits, usage chart, notifications with Allow/Deny buttons" width="400">
-</p>
 
 The usage-tracking core is derived from [claude-usage-bar](https://github.com/Blimp-Labs/claude-usage-bar) (BSD-2-Clause), extended with a notification pipeline built on [Claude Code hooks](https://code.claude.com/docs/en/hooks).
 
@@ -39,7 +36,20 @@ Alternatively, [download Clabar.zip](https://github.com/Magir/clabar/releases/la
 - **“Burn the limit” reminder**: when less than N% of the weekly window is used and the reset is under M hours away — 🔥 in the icon and a banner in the popover.
 - **“Running low” warning**: the reverse — when any window (5-hour, weekly, per-model) is above a configurable threshold (85% by default), ⚠️ in the icon and a red banner.
 - **Zero-config setup**: hooks are installed automatically on first launch. One-click DevContainer setup.
-- **Localization**: English / Russian, auto-detected from the system with a manual override in Settings.
+- **Localization**: English, Русский, Español, Português, Français, Deutsch, Українська — auto-detected from the system language, with a manual override in Settings.
+
+## Screenshots
+
+<p align="center">
+  <img src="docs/history.png" alt="Notification history: sortable table with type, project and source filters" width="760">
+</p>
+
+<table>
+<tr valign="top">
+<td width="45%"><img src="docs/settings.png" alt="Settings: language, menu bar icon, event recording, notifications"></td>
+<td width="55%"><img src="docs/event-detail.png" alt="Event details: full message, project, source, session — with Open session button"><br><br><img src="docs/popover.png" alt="Popover with limits, chart and notifications"></td>
+</tr>
+</table>
 
 ## Build & run
 

@@ -56,9 +56,9 @@ struct SettingsView: View {
 
             Section(L("Язык / Language", "Language / Язык")) {
                 Picker(L("Язык интерфейса", "Interface language"), selection: $lang.language) {
-                    Text(L("Авто (как в системе)", "Auto (system)")).tag(AppLanguage.auto)
-                    Text("Русский").tag(AppLanguage.ru)
-                    Text("English").tag(AppLanguage.en)
+                    ForEach(AppLanguage.allCases) { language in
+                        Text(language.displayName).tag(language)
+                    }
                 }
             }
 
@@ -104,9 +104,9 @@ struct SettingsView: View {
             Section(L("Напоминание «сожги лимит»", "“Burn the limit” reminder")) {
                 Toggle(L("Подсвечивать, когда недельный лимит пропадает", "Highlight when the weekly limit is about to expire unused"), isOn: $nudgeEnabled)
                 if nudgeEnabled {
-                    Stepper(L("Если использовано меньше \(nudgeThreshold)%", "If less than \(nudgeThreshold)% used"),
+                    Stepper(LT("Если использовано меньше {n}%", "If less than {n}% used", ["n": "\(nudgeThreshold)"]),
                             value: $nudgeThreshold, in: 5...95, step: 5)
-                    Stepper(L("и до сброса меньше \(nudgeWindow) ч", "and reset is under \(nudgeWindow) h away"),
+                    Stepper(LT("и до сброса меньше {n} ч", "and reset is under {n} h away", ["n": "\(nudgeWindow)"]),
                             value: $nudgeWindow, in: 3...48, step: 3)
                 }
             }
@@ -114,7 +114,7 @@ struct SettingsView: View {
             Section(L("Предупреждение «лимит кончается»", "“Running low” warning")) {
                 Toggle(L("Подсвечивать, когда лимит почти исчерпан", "Highlight when a limit is almost used up"), isOn: $lowWarnEnabled)
                 if lowWarnEnabled {
-                    Stepper(L("Если использовано больше \(lowWarnThreshold)%", "If more than \(lowWarnThreshold)% used"),
+                    Stepper(LT("Если использовано больше {n}%", "If more than {n}% used", ["n": "\(lowWarnThreshold)"]),
                             value: $lowWarnThreshold, in: 50...95, step: 5)
                 }
             }
@@ -164,7 +164,7 @@ struct SettingsView: View {
                     set: { usage.updatePollingInterval($0) }
                 )) {
                     ForEach(UsageService.pollingOptions, id: \.self) { minutes in
-                        Text(L("\(minutes) мин", "\(minutes) min")).tag(minutes)
+                        Text(LT("{n} мин", "{n} min", ["n": "\(minutes)"])).tag(minutes)
                     }
                 }
                 if usage.isAuthenticated {
@@ -290,14 +290,12 @@ struct SettingsView: View {
             let port = UInt16(clamping: serverPort)
             switch try HookInstaller.patchDevcontainer(file: file, projectURL: projectURL, port: port) {
             case .patched:
-                devcontainerMessage = L("Готово: \(file.lastPathComponent) обновлён (бэкап рядом). Пересоберите контейнер.",
-                                        "Done: \(file.lastPathComponent) updated (backup next to it). Rebuild the container.")
+                devcontainerMessage = LT("Готово: {file} обновлён (бэкап рядом). Пересоберите контейнер.", "Done: {file} updated (backup next to it). Rebuild the container.", ["file": file.lastPathComponent])
             case .alreadyPatched:
                 devcontainerMessage = L("Уже настроено.", "Already set up.")
             case .patchedExistingConfig(let hooksInstalledAt):
                 if let hooksInstalledAt {
-                    devcontainerMessage = L("У проекта свой CLAUDE_CONFIG_DIR — оставлен как есть, хуки Clabar установлены в \(hooksInstalledAt). Пересоберите контейнер.",
-                                            "Project has its own CLAUDE_CONFIG_DIR — kept as is; Clabar hooks installed into \(hooksInstalledAt). Rebuild the container.")
+                    devcontainerMessage = LT("У проекта свой CLAUDE_CONFIG_DIR — оставлен как есть, хуки Clabar установлены в {path}. Пересоберите контейнер.", "Project has its own CLAUDE_CONFIG_DIR — kept as is; Clabar hooks installed into {path}. Rebuild the container.", ["path": hooksInstalledAt])
                 } else {
                     devcontainerMessage = L("У проекта свой CLAUDE_CONFIG_DIR, но его хостовый путь не разрешился. Добавлен только CLABAR_HOST; поставьте хуки в тот конфиг кнопкой «Установить», указав его через CLAUDE_CONFIG_DIR, или вручную.",
                                             "Project has its own CLAUDE_CONFIG_DIR but its host path couldn't be resolved. Only CLABAR_HOST was added; install hooks into that config manually.")
