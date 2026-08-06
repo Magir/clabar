@@ -43,6 +43,7 @@ struct LogWindowView: View {
             table
         }
         .frame(minWidth: 700, minHeight: 300)
+        .navigationTitle(L("История уведомлений", "Notification History"))
         .environment(\.locale, Lang.locale)
         .sheet(item: $detailEvent) { event in
             EventDetailView(event: event) { detailEvent = nil }

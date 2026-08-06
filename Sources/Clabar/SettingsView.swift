@@ -194,6 +194,9 @@ struct SettingsView: View {
         }
         .formStyle(.grouped)
         .frame(width: 460, height: 660)
+        // The Window scene title is baked at scene creation and ignores
+        // language switches — the content-level title is the live one.
+        .navigationTitle(L("Настройки Clabar", "Clabar Settings"))
         .environment(\.locale, Lang.locale)
         .sheet(isPresented: $showSnippet) { snippetSheet }
         .onAppear { DockPolicy.windowShown() }
