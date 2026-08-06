@@ -61,6 +61,14 @@ OLDER than local (stricter concurrency checks); a green local build does not
 guarantee CI. Never commit secrets: the Sparkle private key lives only in the
 GitHub secret and the owner's Keychain.
 
+GitHub Pages deployments are keyed by commit SHA and **idempotent**: re-running
+`deploy_appcast` for a SHA that already deployed once reports success but
+changes nothing. If a stale appcast is being served (e.g. a cancelled run's
+server-side deployment landed late and overwrote a newer one — this has
+happened), the only reliable republish is a NEW tag (new SHA). Verify with
+`curl -s "https://magir.github.io/clabar/appcast.xml?cb=$RANDOM"` — the CDN
+caches for 10 minutes.
+
 ## Architecture
 
 Two data flows:
