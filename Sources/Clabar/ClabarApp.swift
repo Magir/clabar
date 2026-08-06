@@ -1,7 +1,16 @@
 import SwiftUI
 
+/// Closing the last window (Cmd+W on history/settings) must never quit the
+/// app — it lives in the menu bar.
+final class ClabarAppDelegate: NSObject, NSApplicationDelegate {
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        false
+    }
+}
+
 @main
 struct ClabarApp: App {
+    @NSApplicationDelegateAdaptor(ClabarAppDelegate.self) private var appDelegate
     @StateObject private var model = AppModel.shared
     @StateObject private var lang = LangObserver.shared
 
@@ -120,6 +129,8 @@ struct MenuBarLabel: View {
 
     /// CLABAR_DEBUG_OPEN=<window id>: open the window at launch and dump its
     /// state to stdout — lets automated runs verify windows come to front.
+    /// CLABAR_DEBUG_CLOSE=1 additionally closes it via performClose (the same
+    /// path as Cmd+W) and reports whether the process survived.
     private func debugAutoOpen() async {
         guard let target = ProcessInfo.processInfo.environment["CLABAR_DEBUG_OPEN"] else { return }
         try? await Task.sleep(for: .seconds(1))
@@ -130,6 +141,14 @@ struct MenuBarLabel: View {
         }
         lines.append("clabar-debug appActive=\(NSApp.isActive)")
         FileHandle.standardError.write(Data((lines.joined(separator: "\n") + "\n").utf8))
+
+        guard ProcessInfo.processInfo.environment["CLABAR_DEBUG_CLOSE"] != nil else { return }
+        try? await Task.sleep(for: .seconds(1))
+        NSApp.windows.first {
+            $0.identifier?.rawValue.hasPrefix(target) == true
+        }?.performClose(nil)
+        try? await Task.sleep(for: .seconds(2))
+        FileHandle.standardError.write(Data("clabar-debug survived-close=true\n".utf8))
     }
 
     private var barRows: [IconRow] {

@@ -4,6 +4,8 @@
 
 macOS menu bar app for Claude: usage limits at a glance + native notifications from Claude Code sessions.
 
+<a href="https://buymeacoffee.com/magir" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" height="41" width="174"></a>
+
 <br clear="left">
 
 <p align="center">

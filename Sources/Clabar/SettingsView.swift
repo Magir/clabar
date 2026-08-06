@@ -33,6 +33,7 @@ struct SettingsView: View {
 
     @State private var devcontainerMessage: String?
     @State private var showSnippet = false
+    @State private var launchAtLogin = false
 
     init(model: AppModel) {
         self.model = model
@@ -43,6 +44,16 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
+            Section(L("Общие", "General")) {
+                Toggle(L("Запускать при входе в систему", "Launch at login"), isOn: Binding(
+                    get: { launchAtLogin },
+                    set: { newValue in
+                        LoginItem.setEnabled(newValue)
+                        launchAtLogin = LoginItem.isEnabled
+                    }
+                ))
+            }
+
             Section(L("Язык / Language", "Language / Язык")) {
                 Picker(L("Язык интерфейса", "Interface language"), selection: $lang.language) {
                     Text(L("Авто (как в системе)", "Auto (system)")).tag(AppLanguage.auto)
@@ -177,7 +188,10 @@ struct SettingsView: View {
                 Button(L("Завершить Clabar", "Quit Clabar")) { NSApplication.shared.terminate(nil) }
             }
         }
-        .onAppear { notifier.refreshAuthorizationStatus() }
+        .onAppear {
+            notifier.refreshAuthorizationStatus()
+            launchAtLogin = LoginItem.isEnabled
+        }
         .formStyle(.grouped)
         .frame(width: 460, height: 660)
         .environment(\.locale, Lang.locale)

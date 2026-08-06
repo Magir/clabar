@@ -13,9 +13,12 @@ struct PopoverView: View {
         self.store = model.store
     }
 
+    @AppStorage("autostartOffered") private var autostartOffered = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             header
+            autostartOffer
             if usage.isAuthenticated {
                 nudgeBanners
                 usageSection
@@ -54,6 +57,33 @@ struct PopoverView: View {
             if let email = usage.accountEmail {
                 Text(email).font(.caption).foregroundStyle(.secondary)
             }
+        }
+    }
+
+    // MARK: - First-launch autostart offer
+
+    @ViewBuilder
+    private var autostartOffer: some View {
+        if !autostartOffered && !LoginItem.isEnabled {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(L("Запускать Clabar автоматически при входе в систему?",
+                       "Launch Clabar automatically at login?"))
+                    .font(.callout)
+                HStack {
+                    Button(L("Включить", "Enable")) {
+                        LoginItem.setEnabled(true)
+                        autostartOffered = true
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                    Button(L("Не сейчас", "Not now")) { autostartOffered = true }
+                        .buttonStyle(.borderless)
+                        .controlSize(.small)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(8)
+            .background(.blue.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
         }
     }
 
