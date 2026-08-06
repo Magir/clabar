@@ -140,11 +140,11 @@ Nothing leaves your machine except the usage requests to the Anthropic API.
 
 ## Distribution & auto-updates
 
-Releases are distributed via GitHub Releases; in-app auto-updates use [Sparkle](https://sparkle-project.org) with an appcast on GitHub Pages. Update archives are EdDSA-signed — no Apple Developer ID required (the app itself stays ad-hoc signed: on first launch of a downloaded build, right-click → Open to pass Gatekeeper).
+Releases are distributed via GitHub Releases; in-app auto-updates use [Sparkle](https://sparkle-project.org) with the appcast attached to each release (`releases/latest/download/appcast.xml`). Update archives are EdDSA-signed — no Apple Developer ID required (the app itself stays ad-hoc signed: on first launch of a downloaded build, right-click → Open to pass Gatekeeper).
 
 One-time setup for a fork:
 
-1. Push the repo to GitHub. In **Settings → Pages** set Source to **GitHub Actions**.
+1. Push the repo to GitHub.
 2. Generate Sparkle keys locally (stored in your Keychain):
 
    ```sh
@@ -156,7 +156,7 @@ One-time setup for a fork:
 3. In **Settings → Secrets and variables → Actions** add:
    - variable `SPARKLE_PUBLIC_KEY` — the printed public key;
    - secret `SPARKLE_PRIVATE_KEY` — contents of `sparkle-private.key` (then delete the file; the key also stays in your Keychain).
-4. Ship: `git tag v0.1.0 && git push --tags`. The workflow builds the app with the feed URL and public key stamped in, attaches `Clabar.zip` to the release, and publishes `appcast.xml` to GitHub Pages. Installed release builds check for updates automatically and via Settings → “Check for updates…”.
+4. Ship: `git tag v0.1.0 && git push --tags`. The workflow builds the app with the feed URL and public key stamped in, then attaches `Clabar.zip` and the signed `appcast.xml` to the release. Installed release builds check for updates automatically and via Settings → “Check for updates…”.
 
 Local `make app` builds have the updater disabled (no feed/key stamped) — Settings shows “Local build”.
 

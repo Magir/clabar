@@ -13,25 +13,21 @@ jobs:
     runs-on: macos-15
     permissions:
       contents: write
-    outputs:
-      appcast: ${{ steps.appcast.outputs.generated }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
 
       - name: Build release app bundle
         env:
           SPARKLE_PUB_KEY: ${{ vars.SPARKLE_PUBLIC_KEY }}
         run: |
           set -euo pipefail
+          # The appcast lives as a release asset — the /latest/ URL always
+          # serves the newest release. (GitHub Pages proved unreliable here:
+          # deployments queued 10-25 min against the action's hard 10-min cap.)
           if [[ -n "${SPARKLE_PUB_KEY:-}" ]]; then
-            owner="$(printf '%s' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')"
-            repo="${GITHUB_REPOSITORY#*/}"
             make app \
               APP_VERSION="${GITHUB_REF_NAME#v}" \
-              SU_FEED_URL="https://${owner}.github.io/${repo}/appcast.xml" \
+              SU_FEED_URL="https://github.com/${GITHUB_REPOSITORY}/releases/latest/download/appcast.xml" \
               SPARKLE_PUB_KEY="${SPARKLE_PUB_KEY}"
           else
             echo "::warning::SPARKLE_PUBLIC_KEY variable not set — building without auto-update support."
@@ -51,6 +47,25 @@ jobs:
       - name: Package
         run: ditto -c -k --sequesterRsrc --keepParent build/Clabar.app Clabar.zip
 
+      - name: Generate Sparkle appcast
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${SPARKLE_PRIVATE_KEY:-}" ]]; then
+            echo "::warning::SPARKLE_PRIVATE_KEY secret not set — no appcast; auto-updates disabled for this release."
+            exit 0
+          fi
+          mkdir -p dist/archives
+          cp Clabar.zip dist/archives/Clabar.zip
+          printf '%s' "$SPARKLE_PRIVATE_KEY" | \
+            .build/artifacts/sparkle/Sparkle/bin/generate_appcast \
+              dist/archives \
+              --ed-key-file - \
+              --download-url-prefix "https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/" \
+              --maximum-deltas 0 \
+              -o appcast.xml
+
       - name: Generate release notes
         env:
           GH_TOKEN: ${{ github.token }}
@@ -63,52 +78,7 @@ jobs:
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
-          files: Clabar.zip
+          files: |
+            Clabar.zip
+            appcast.xml
           body_path: release-notes.md
-
-      - name: Generate Sparkle appcast
-        id: appcast
-        env:
-          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
-        run: |
-          set -euo pipefail
-          if [[ -z "${SPARKLE_PRIVATE_KEY:-}" ]]; then
-            echo "::warning::SPARKLE_PRIVATE_KEY secret not set — skipping appcast; auto-updates disabled for this release."
-            echo "generated=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          mkdir -p dist/archives dist/site
-          cp Clabar.zip dist/archives/Clabar.zip
-          printf '%s' "$SPARKLE_PRIVATE_KEY" | \
-            .build/artifacts/sparkle/Sparkle/bin/generate_appcast \
-              dist/archives \
-              --ed-key-file - \
-              --download-url-prefix "https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/" \
-              --maximum-deltas 0 \
-              -o dist/site/appcast.xml
-          echo "generated=true" >> "$GITHUB_OUTPUT"
-
-      - name: Upload appcast for GitHub Pages
-        if: steps.appcast.outputs.generated == 'true'
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: dist/site
-
-  deploy_appcast:
-    needs: release
-    if: needs.release.outputs.appcast == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      # Note: Pages deployments have a server-side 10-minute cap — raising the
-      # action's timeout does nothing. If deployments sit in deployment_queued
-      # forever, the Pages site is wedged: recreate it
-      # (DELETE /repos/{o}/{r}/pages, POST with build_type=workflow).
-      - name: Deploy appcast
-        id: deployment
-        uses: actions/deploy-pages@v4

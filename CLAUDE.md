@@ -45,11 +45,16 @@ git tag vX.Y.Z && git push --tags
 ```
 
 GitHub Actions (`release.yml`, runner macos-15) then: builds with
-`APP_VERSION`, `SU_FEED_URL` (GitHub Pages appcast) and `SPARKLE_PUB_KEY`
-stamped into Info.plist → attaches `Clabar.zip` to the GitHub Release →
-signs and publishes `appcast.xml` to GitHub Pages (Sparkle auto-updates).
-Requires repo variable `SPARKLE_PUBLIC_KEY` + secret `SPARKLE_PRIVATE_KEY`;
-if missing, the release still publishes but without auto-updates (warning).
+`APP_VERSION`, `SU_FEED_URL` and `SPARKLE_PUB_KEY` stamped into Info.plist,
+runs a launch smoke test, generates the EdDSA-signed `appcast.xml` and
+attaches BOTH `Clabar.zip` and `appcast.xml` to the GitHub Release. The feed
+URL is `releases/latest/download/appcast.xml` — no GitHub Pages involved
+(Pages was abandoned: its deployments queued 10-25 min against the deploy
+action's hard 10-min cap, and a cancelled run's deployment once landed late
+and overwrote a newer one). Requires repo variable `SPARKLE_PUBLIC_KEY` +
+secret `SPARKLE_PRIVATE_KEY`; if missing, the release still publishes but
+without auto-updates (warning). Builds ≤0.1.5 still point at the legacy
+Pages feed — those users reinstall once via install.sh.
 README's install link `releases/latest/download/Clabar.zip` always serves the
 newest release; `install.sh` (curl one-liner in README) installs without
 Gatekeeper friction — curl-downloaded files carry no quarantine attribute,
@@ -61,13 +66,6 @@ OLDER than local (stricter concurrency checks); a green local build does not
 guarantee CI. Never commit secrets: the Sparkle private key lives only in the
 GitHub secret and the owner's Keychain.
 
-GitHub Pages serving gotchas (both bit us):
-- A cancelled run's server-side Pages deployment can land LATE and overwrite a
-  newer successful one. Re-running just the `deploy_appcast` job of the good
-  run fixes it.
-- The Pages CDN caches for ~10 minutes and IGNORES query strings — `?cb=...`
-  does NOT bust the cache. After any appcast deploy, wait out the TTL before
-  concluding it failed; check `last-modified`/`age` response headers instead.
 
 ## Architecture
 
