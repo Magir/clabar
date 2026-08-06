@@ -31,7 +31,7 @@ Alternatively, [download Clabar.zip](https://github.com/Magir/clabar/releases/la
 
 - **Menu bar icon with a popover.** Customizable: mini usage bars, percentages as text (5-hour / weekly / Fable), unread notifications counter, 🔥/⚠️ status markers.
 - **Usage limits**: the 5-hour window, the weekly window, and any per-model windows (Fable, Opus, …) the API reports — new limit types show up automatically. Usage history chart (1h–30d ranges).
-- **Notifications from Claude Code** via hooks: asks (permission requests, questions, plan ready), task completion, failures — each with its own icon. System banners with action buttons on asks (Allow / Deny / Open). Clicking jumps to the app hosting the session (VS Code opens the right folder).
+- **Notifications from Claude Code** via hooks: asks (permission requests, questions, plan ready), task completion, failures — each with its own icon. System banners; clicking one (or the Open session button) jumps to the app hosting the session (VS Code opens the right folder).
 - **Notification history**: a separate window with a sortable table, filters by type / unread / free-text search. Double-click opens the session.
 - **“Burn the limit” reminder**: when less than N% of the weekly window is used and the reset is under M hours away — 🔥 in the icon and a banner in the popover.
 - **“Running low” warning**: the reverse — when any window (5-hour, weekly, per-model) is above a configurable threshold (85% by default), ⚠️ in the icon and a red banner.
@@ -41,15 +41,13 @@ Alternatively, [download Clabar.zip](https://github.com/Magir/clabar/releases/la
 ## Screenshots
 
 <p align="center">
-  <img src="docs/history.png" alt="Notification history: sortable table with type, project and source filters" width="760">
+  <img src="docs/settings.png" alt="Settings: language, menu bar icon, event recording, notifications" width="32%">
+  <img src="docs/popover.png" alt="Popover with limits, usage chart and notifications" width="32%">
+  <img src="docs/event-detail.png" alt="Event details: full message, project, source, session" width="32%">
 </p>
-
-<table>
-<tr valign="top">
-<td width="45%"><img src="docs/settings.png" alt="Settings: language, menu bar icon, event recording, notifications"></td>
-<td width="55%"><img src="docs/event-detail.png" alt="Event details: full message, project, source, session — with Open session button"><br><br><img src="docs/popover.png" alt="Popover with limits, chart and notifications"></td>
-</tr>
-</table>
+<p align="center">
+  <img src="docs/history.png" alt="Notification history: sortable table with type, project and source filters" width="97%">
+</p>
 
 ## Build & run
 
@@ -66,7 +64,6 @@ First launch:
 1. Allow **notifications** when prompted.
 2. Click **“Sign in with Claude”** in the popover — OAuth in the browser, paste the code back.
 3. Hooks are installed into `~/.claude/settings.json` automatically (backup: `settings.json.clabar-backup`).
-4. For the experimental keystroke answers (⏎ Allow / ⎋ Deny actually pressing keys in the session), enable the option in Settings and grant Clabar the **Accessibility** permission. Off by default — the buttons just focus the session.
 
 ## How it works
 

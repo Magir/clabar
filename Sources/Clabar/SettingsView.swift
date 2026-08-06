@@ -19,7 +19,6 @@ struct SettingsView: View {
     @AppStorage(SettingsKeys.lowWarnEnabled) private var lowWarnEnabled = true
     @AppStorage(SettingsKeys.lowWarnThresholdPct) private var lowWarnThreshold = 85
     @AppStorage(SettingsKeys.serverPort) private var serverPort = Int(HookInstaller.defaultPort)
-    @AppStorage(SessionFocus.keystrokesDefaultsKey) private var sendKeystrokes = false
     @AppStorage(Notifier.soundDefaultsKey) private var sound = true
     @AppStorage("\(Notifier.bannersForKindKey).ask") private var bannersAsk = true
     @AppStorage("\(Notifier.bannersForKindKey).done") private var bannersDone = true
@@ -34,7 +33,6 @@ struct SettingsView: View {
     @State private var devcontainerMessage: String?
     @State private var showSnippet = false
     @State private var launchAtLogin = false
-    @State private var axTrusted = false
 
     init(model: AppModel) {
         self.model = model
@@ -93,31 +91,6 @@ struct SettingsView: View {
                     .disabled(!recordError)
                 Toggle(L("Баннеры: прочее", "Banners: other"), isOn: $bannersInfo)
                     .disabled(!recordInfo)
-                Toggle(L("Отвечать на запросы клавишами (⏎/⎋, экспериментально)",
-                         "Answer prompts with keystrokes (⏎/⎋, experimental)"), isOn: $sendKeystrokes)
-                    .onChange(of: sendKeystrokes) { _, enabled in
-                        if enabled && !SessionFocus.accessibilityTrusted {
-                            SessionFocus.requestAccessibility()
-                        }
-                        axTrusted = SessionFocus.accessibilityTrusted
-                    }
-                if sendKeystrokes {
-                    HStack {
-                        Image(systemName: axTrusted ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                            .foregroundStyle(axTrusted ? .green : .orange)
-                        Text(axTrusted
-                             ? L("Разрешение Accessibility выдано", "Accessibility permission granted")
-                             : L("Нужно разрешение Accessibility", "Accessibility permission required"))
-                        if !axTrusted {
-                            Button(L("Открыть настройки Accessibility", "Open Accessibility settings")) {
-                                NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
-                            }
-                        }
-                    }
-                    Text(L("Нажатие уйдёт в активное окно после фокусировки сессии.",
-                           "The keystroke goes to the active window after focusing the session."))
-                        .font(.caption).foregroundStyle(.secondary)
-                }
             }
 
             Section(L("Напоминание «сожги лимит»", "“Burn the limit” reminder")) {
@@ -210,7 +183,6 @@ struct SettingsView: View {
         .onAppear {
             notifier.refreshAuthorizationStatus()
             launchAtLogin = LoginItem.isEnabled
-            axTrusted = SessionFocus.accessibilityTrusted
         }
         .formStyle(.grouped)
         .frame(width: 460, height: 660)

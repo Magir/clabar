@@ -246,31 +246,14 @@ struct EventRow: View {
             .buttonStyle(.plain)
 
             if event.kind == .ask && !event.read {
-                HStack(spacing: 6) {
-                    Button(L("⏎ Разрешить", "⏎ Allow")) {
-                        store.markRead(event.id)
-                        SessionFocus.answer(event, allow: true)
-                    }
-                    Button(L("⎋ Отклонить", "⎋ Deny")) {
-                        store.markRead(event.id)
-                        SessionFocus.answer(event, allow: false)
-                    }
-                    Button(L("Открыть", "Open")) {
-                        store.markRead(event.id)
-                        SessionFocus.focus(event)
-                    }
+                Button(L("Открыть сессию", "Open session")) {
+                    store.markRead(event.id)
+                    SessionFocus.focus(event)
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
                 .font(.caption2)
                 .padding(.leading, 18)
-
-                if !SessionFocus.keystrokesEnabled {
-                    Text(L("⏎/⎋ пока только фокусируют сессию — включите «Отвечать клавишами» в настройках.",
-                           "⏎/⎋ only focus the session for now — enable “Answer with keystrokes” in Settings."))
-                        .font(.caption2).foregroundStyle(.tertiary)
-                        .padding(.leading, 18)
-                }
             }
         }
     }

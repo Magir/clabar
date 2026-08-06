@@ -81,8 +81,8 @@ Two data flows:
 2. **Events**: Claude Code hooks run `~/.claude/hooks/clabar-hook.sh` → POST
    JSON to `127.0.0.1:8737/event` (`EventServer`, hand-rolled minimal HTTP) →
    `EventClassifier.classify` (kind: ask/done/error/info) → `EventStore.add`
-   (recording filter, dedupe, JSON persistence) → `Notifier` (banners with
-   Allow/Deny/Open actions) and UI. Env context (TERM_PROGRAM, bundle id,
+   (recording filter, dedupe, JSON persistence) → `Notifier` (banners with an
+   Open-session action) and UI. Env context (TERM_PROGRAM, bundle id,
    remote flag) travels as `X-Clabar-*` HTTP headers set by the hook script.
 
 Files (Sources/Clabar/):
@@ -135,8 +135,8 @@ Files (Sources/Clabar/):
   resolves (see `resolveHostPath`).
 - **UserDefaults keys in tests**: pin `appLanguage` (labels are localized) and
   clean up in tearDown; `EventStore(directory:)` takes a temp dir.
-- Notification permission, Accessibility (keystroke answers) — user-granted;
-  the app must degrade gracefully without them.
+- Notification permission is user-granted; the app must degrade gracefully
+  without it.
 
 ## Data locations (user machine)
 

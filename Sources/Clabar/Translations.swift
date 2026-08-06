@@ -21,9 +21,6 @@ enum Translations {
         "Tool failed: ": ["es": "Falló la herramienta: ", "pt": "Falha na ferramenta: ", "fr": "Échec de l'outil : ", "de": "Werkzeugfehler: ", "uk": "Збій інструмента: "],
 
         // MARK: Notification actions
-        "⏎ Allow": ["es": "⏎ Permitir", "pt": "⏎ Permitir", "fr": "⏎ Autoriser", "de": "⏎ Erlauben", "uk": "⏎ Дозволити"],
-        "⎋ Deny": ["es": "⎋ Denegar", "pt": "⎋ Negar", "fr": "⎋ Refuser", "de": "⎋ Ablehnen", "uk": "⎋ Відхилити"],
-        "Open": ["es": "Abrir", "pt": "Abrir", "fr": "Ouvrir", "de": "Öffnen", "uk": "Відкрити"],
 
         // MARK: Popover
         "Launch Clabar automatically at login?": ["es": "¿Iniciar Clabar automáticamente al iniciar sesión?", "pt": "Iniciar o Clabar automaticamente no login?", "fr": "Lancer Clabar automatiquement à la connexion ?", "de": "Clabar automatisch beim Anmelden starten?", "uk": "Запускати Clabar автоматично під час входу?"],
@@ -112,12 +109,6 @@ enum Translations {
         "Banners: task completion": ["es": "Avisos: tareas completadas", "pt": "Avisos: conclusão de tarefas", "fr": "Bannières : tâches terminées", "de": "Banner: Aufgabenabschluss", "uk": "Банери: завершення роботи"],
         "Banners: failures": ["es": "Avisos: fallos", "pt": "Avisos: falhas", "fr": "Bannières : échecs", "de": "Banner: Fehler", "uk": "Банери: збої"],
         "Banners: other": ["es": "Avisos: otros", "pt": "Avisos: outros", "fr": "Bannières : autres", "de": "Banner: Sonstiges", "uk": "Банери: інше"],
-        "Answer prompts with keystrokes (⏎/⎋, experimental)": ["es": "Responder con teclas (⏎/⎋, experimental)", "pt": "Responder com teclas (⏎/⎋, experimental)", "fr": "Répondre par touches (⏎/⎋, expérimental)", "de": "Mit Tasten antworten (⏎/⎋, experimentell)", "uk": "Відповідати клавішами (⏎/⎋, експериментально)"],
-        "The keystroke goes to the active window after focusing the session.": ["es": "La pulsación va a la ventana activa tras enfocar la sesión.", "pt": "A tecla vai para a janela ativa após focar a sessão.", "fr": "La frappe est envoyée à la fenêtre active après la mise au premier plan de la session.", "de": "Der Tastendruck geht an das aktive Fenster, nachdem die Sitzung fokussiert wurde.", "uk": "Натискання піде в активне вікно після фокусування сесії."],
-        "Accessibility permission granted": ["es": "Permiso de Accesibilidad concedido", "pt": "Permissão de Acessibilidade concedida", "fr": "Autorisation d'Accessibilité accordée", "de": "Bedienungshilfen-Berechtigung erteilt", "uk": "Дозвіл «Універсальний доступ» надано"],
-        "Accessibility permission required": ["es": "Se requiere el permiso de Accesibilidad", "pt": "Permissão de Acessibilidade necessária", "fr": "Autorisation d'Accessibilité requise", "de": "Bedienungshilfen-Berechtigung erforderlich", "uk": "Потрібен дозвіл «Універсальний доступ»"],
-        "Open Accessibility settings": ["es": "Abrir ajustes de Accesibilidad", "pt": "Abrir configurações de Acessibilidade", "fr": "Ouvrir les réglages d'Accessibilité", "de": "Bedienungshilfen-Einstellungen öffnen", "uk": "Відкрити налаштування Універсального доступу"],
-        "⏎/⎋ only focus the session for now — enable “Answer with keystrokes” in Settings.": ["es": "⏎/⎋ por ahora solo enfocan la sesión: activa «Responder con teclas» en Ajustes.", "pt": "⏎/⎋ por enquanto apenas focam a sessão — ative «Responder com teclas» nas Configurações.", "fr": "⏎/⎋ ne font que mettre la session au premier plan — activez « Répondre par touches » dans les Réglages.", "de": "⏎/⎋ fokussieren derzeit nur die Sitzung — aktiviere „Mit Tasten antworten“ in den Einstellungen.", "uk": "⏎/⎋ поки лише фокусують сесію — увімкніть «Відповідати клавішами» в налаштуваннях."],
         "“Burn the limit” reminder": ["es": "Recordatorio «quema el límite»", "pt": "Lembrete «queime o limite»", "fr": "Rappel « brûlez la limite »", "de": "Erinnerung „Limit verbrennen“", "uk": "Нагадування «спали ліміт»"],
         "Highlight when the weekly limit is about to expire unused": ["es": "Resaltar cuando el límite semanal esté por expirar sin usar", "pt": "Destacar quando o limite semanal estiver prestes a expirar sem uso", "fr": "Mettre en évidence quand la limite hebdo va expirer inutilisée", "de": "Hervorheben, wenn das Wochenlimit ungenutzt zu verfallen droht", "uk": "Підсвічувати, коли тижневий ліміт згорає невикористаним"],
         "“Running low” warning": ["es": "Aviso «queda poco»", "pt": "Aviso «acabando»", "fr": "Alerte « presque épuisé »", "de": "Warnung „fast aufgebraucht“", "uk": "Попередження «ліміт закінчується»"],

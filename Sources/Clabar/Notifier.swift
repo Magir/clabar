@@ -41,12 +41,9 @@ final class Notifier: NSObject, ObservableObject, UNUserNotificationCenterDelega
 
     /// Re-registered on every post so action titles follow language switches.
     private func updateCategories() {
-        let open = UNNotificationAction(identifier: "open", title: L("Открыть", "Open"), options: [.foreground])
-        let allow = UNNotificationAction(identifier: "allow", title: L("⏎ Разрешить", "⏎ Allow"), options: [.foreground])
-        let deny = UNNotificationAction(identifier: "deny", title: L("⎋ Отклонить", "⎋ Deny"), options: [.foreground])
+        let open = UNNotificationAction(identifier: "open", title: L("Открыть сессию", "Open session"), options: [.foreground])
         UNUserNotificationCenter.current().setNotificationCategories([
-            UNNotificationCategory(identifier: "clabar.ask", actions: [allow, deny, open], intentIdentifiers: []),
-            UNNotificationCategory(identifier: "clabar.other", actions: [open], intentIdentifiers: []),
+            UNNotificationCategory(identifier: "clabar.event", actions: [open], intentIdentifiers: []),
         ])
     }
 
@@ -64,7 +61,7 @@ final class Notifier: NSObject, ObservableObject, UNUserNotificationCenterDelega
         content.title = "\(event.kind.emoji) \(event.kind.title) — \(event.project)"
         content.subtitle = event.sourceName
         content.body = event.message
-        content.categoryIdentifier = event.kind == .ask ? "clabar.ask" : "clabar.other"
+        content.categoryIdentifier = "clabar.event"
         content.userInfo = ["eventId": event.id.uuidString]
         if event.kind == .ask, UserDefaults.standard.object(forKey: Self.soundDefaultsKey) as? Bool ?? true {
             content.sound = .default
@@ -94,15 +91,10 @@ final class Notifier: NSObject, ObservableObject, UNUserNotificationCenterDelega
     ) async {
         let userInfo = response.notification.request.content.userInfo
         guard let idString = userInfo["eventId"] as? String, let id = UUID(uuidString: idString) else { return }
-        let action = response.actionIdentifier
         await MainActor.run {
             guard let store, let event = store.event(byId: id) else { return }
             store.markRead(id)
-            switch action {
-            case "allow": SessionFocus.answer(event, allow: true)
-            case "deny": SessionFocus.answer(event, allow: false)
-            default: SessionFocus.focus(event) // "open" or default click
-            }
+            SessionFocus.focus(event) // "open" action or plain click
         }
     }
 }
