@@ -185,7 +185,7 @@ struct SettingsView: View {
             }
 
             Section {
-                Button(L("Завершить Clabar", "Quit Clabar")) { NSApplication.shared.terminate(nil) }
+                Button(L("Завершить Clabar", "Quit Clabar")) { ClabarAppDelegate.quit() }
             }
         }
         .onAppear {

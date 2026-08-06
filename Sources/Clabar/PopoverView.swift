@@ -201,7 +201,7 @@ struct PopoverView: View {
             Spacer()
             Button(L("Обновить", "Refresh")) { Task { await usage.fetchUsage() } }
                 .buttonStyle(.borderless).font(.caption)
-            Button(L("Закрыть", "Quit")) { NSApplication.shared.terminate(nil) }
+            Button(L("Закрыть", "Quit")) { ClabarAppDelegate.quit() }
                 .buttonStyle(.borderless).font(.caption).foregroundStyle(.secondary)
         }
     }

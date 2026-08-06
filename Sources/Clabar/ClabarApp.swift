@@ -1,10 +1,40 @@
 import SwiftUI
 
-/// Closing the last window (Cmd+W on history/settings) must never quit the
-/// app — it lives in the menu bar.
+/// The app lives in the menu bar: closing the last window must never quit it,
+/// and Cmd+Q while a window is focused just closes the windows. Real quit
+/// happens via the in-app buttons (explicitQuit) — and system logout/shutdown
+/// is never blocked.
 final class ClabarAppDelegate: NSObject, NSApplicationDelegate {
+    static var explicitQuit = false
+
+    static func quit() {
+        explicitQuit = true
+        NSApplication.shared.terminate(nil)
+    }
+
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         false
+    }
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        if Self.explicitQuit { return .terminateNow }
+
+        // 'why?' attribute is present when the quit comes from logout,
+        // shutdown or restart — never stand in the way of those.
+        let quitReason = NSAppleEventManager.shared().currentAppleEvent?
+            .attributeDescriptor(forKeyword: AEKeyword(0x7768793F)) // kAEQuitReason
+        if quitReason != nil { return .terminateNow }
+
+        let realWindows = NSApp.windows.filter { window in
+            window.isVisible && ["log", "settings"].contains {
+                window.identifier?.rawValue.hasPrefix($0) == true
+            }
+        }
+        guard realWindows.isEmpty else {
+            realWindows.forEach { $0.performClose(nil) }
+            return .terminateCancel
+        }
+        return .terminateNow
     }
 }
 
@@ -142,13 +172,25 @@ struct MenuBarLabel: View {
         lines.append("clabar-debug appActive=\(NSApp.isActive)")
         FileHandle.standardError.write(Data((lines.joined(separator: "\n") + "\n").utf8))
 
-        guard ProcessInfo.processInfo.environment["CLABAR_DEBUG_CLOSE"] != nil else { return }
-        try? await Task.sleep(for: .seconds(1))
-        NSApp.windows.first {
-            $0.identifier?.rawValue.hasPrefix(target) == true
-        }?.performClose(nil)
-        try? await Task.sleep(for: .seconds(2))
-        FileHandle.standardError.write(Data("clabar-debug survived-close=true\n".utf8))
+        if ProcessInfo.processInfo.environment["CLABAR_DEBUG_CLOSE"] != nil {
+            try? await Task.sleep(for: .seconds(1))
+            NSApp.windows.first {
+                $0.identifier?.rawValue.hasPrefix(target) == true
+            }?.performClose(nil)
+            try? await Task.sleep(for: .seconds(2))
+            FileHandle.standardError.write(Data("clabar-debug survived-close=true\n".utf8))
+        }
+
+        // Cmd+Q semantics: terminate with a window open must only close it;
+        // a second terminate with no windows quits for real (process exits).
+        if ProcessInfo.processInfo.environment["CLABAR_DEBUG_QUIT"] != nil {
+            try? await Task.sleep(for: .seconds(1))
+            NSApp.terminate(nil)
+            try? await Task.sleep(for: .seconds(2))
+            let visible = NSApp.windows.filter(\.isVisible).count
+            FileHandle.standardError.write(Data("clabar-debug survived-quit-with-window=true visibleWindows=\(visible)\n".utf8))
+            NSApp.terminate(nil)
+        }
     }
 
     private var barRows: [IconRow] {
