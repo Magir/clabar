@@ -170,6 +170,20 @@ struct MenuBarLabel: View {
     private func debugAutoOpen() async {
         guard let target = ProcessInfo.processInfo.environment["CLABAR_DEBUG_OPEN"] else { return }
         try? await Task.sleep(for: .seconds(1))
+
+        if target == "popover" {
+            MenuBarToggle.toggle()
+            try? await Task.sleep(for: .seconds(2))
+            var lines: [String] = []
+            for window in NSApp.windows where window.isVisible {
+                let top = window.frame.maxY
+                let barBottom = (window.screen ?? NSScreen.main)?.visibleFrame.maxY ?? -1
+                lines.append("clabar-debug panel class=\(window.className) top=\(Int(top)) menuBarBottom=\(Int(barBottom)) gap=\(Int(barBottom - top))")
+            }
+            FileHandle.standardError.write(Data((lines.joined(separator: "\n") + "\n").utf8))
+            return
+        }
+
         presentFront { openWindow(id: target) }
         try? await Task.sleep(for: .seconds(1))
         var lines = NSApp.windows.map {

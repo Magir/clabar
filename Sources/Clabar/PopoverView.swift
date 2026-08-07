@@ -252,20 +252,45 @@ struct PopoverView: View {
     }
 }
 
-/// Grabs the hosting NSWindow (the MenuBarExtra panel) and snaps its top edge
-/// back under the menu bar — SwiftUI itself never re-anchors it.
+/// Keeps the MenuBarExtra panel's top edge pinned under the menu bar. The
+/// panel anchors its bottom, so height changes make the top sag; SwiftUI never
+/// re-anchors it. updateNSView is NOT reliable here (no changing inputs → no
+/// re-renders), so we observe the window itself and snap on every resize/move.
 private struct MenuBarPanelSnapper: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSView {
-        let view = NSView()
-        DispatchQueue.main.async { Self.snap(view.window) }
-        return view
+    func makeNSView(context: Context) -> NSView { SnapperView() }
+    func updateNSView(_ view: NSView, context: Context) {}
+}
+
+private final class SnapperView: NSView {
+    private var observers: [NSObjectProtocol] = []
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        observers.forEach { NotificationCenter.default.removeObserver($0) }
+        observers = []
+        guard let window else { return }
+        Self.snap(window)
+        let names: [NSNotification.Name] = [
+            NSWindow.didResizeNotification,
+            NSWindow.didMoveNotification,
+            NSWindow.didBecomeKeyNotification,
+            NSWindow.didChangeScreenNotification,
+        ]
+        for name in names {
+            observers.append(NotificationCenter.default.addObserver(
+                forName: name, object: window, queue: .main
+            ) { [weak window] _ in
+                Self.snap(window)
+            })
+        }
     }
 
-    func updateNSView(_ view: NSView, context: Context) {
-        DispatchQueue.main.async { Self.snap(view.window) }
+    deinit {
+        observers.forEach { NotificationCenter.default.removeObserver($0) }
     }
 
-    private static func snap(_ window: NSWindow?) {
+    /// The 1px tolerance also breaks the snap→didMove feedback loop.
+    static func snap(_ window: NSWindow?) {
         guard let window, window.isVisible,
               let screen = window.screen ?? NSScreen.main else { return }
         let targetTop = screen.visibleFrame.maxY
