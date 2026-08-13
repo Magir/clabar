@@ -121,10 +121,17 @@ Files (Sources/Clabar/):
 - **MenuBarExtra label**: only the first standalone `Image` renders; icons must
   be embedded into `Text` (`Text(Image(systemName:))`). Plain unicode glyphs
   like ✉ may have no glyph in the menu bar font (renders as ✖).
-- **MenuBarExtra(.window) panel drifts downward**: the panel anchors its BOTTOM
-  edge, so every content-height change lets the top sag further below the menu
-  bar. `MenuBarPanelSnapper` (NSViewRepresentable in PopoverView) re-pins the
-  top on each render — keep it attached to the popover root.
+- **MenuBarExtra(.window) panel drifts/teleports on content resize**: SwiftUI
+  re-anchors the panel on every content size change, using the status item of
+  whichever display is currently "active" — the top sags below the menu bar,
+  and on multi-display setups the panel can jump to ANOTHER screen mid-session
+  (each search keystroke resizes the content → panel flies to the previously
+  active display). `MenuBarPanelSnapper` (NSViewRepresentable in PopoverView)
+  captures the top-left + screen when the panel becomes visible and restores
+  it on every resize/move — keep it attached to the popover root. Debug
+  harness: `CLABAR_DEBUG_OPEN=popover CLABAR_DEBUG_QUERY=<text>` simulates
+  typing into search, `CLABAR_DEBUG_KICK=1` teleports the panel mid-typing
+  (snapper must yank it back), `CLABAR_DEBUG_SNAP=1` logs snap decisions.
 - **Window presentation from the popover**: use `presentFront {}` — it flips the
   activation policy BEFORE opening (flipping after makes the window vanish),
   opens, closes the popover, then activates. The `Settings` scene is unusable in

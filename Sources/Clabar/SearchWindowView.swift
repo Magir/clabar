@@ -77,6 +77,7 @@ struct SearchField: View {
             TextField(L("Поиск по сессиям…", "Search sessions…"), text: $search.query)
                 .textFieldStyle(.plain)
                 .font(.callout)
+                .onExitCommand { search.query = "" }
             if search.isSearching {
                 ProgressView().controlSize(.small).scaleEffect(0.6)
             } else if search.isActive {

@@ -177,20 +177,48 @@ struct MenuBarLabel: View {
         try? await Task.sleep(for: .seconds(1))
 
         if target == "popover" {
+            NSApp.activate(ignoringOtherApps: true)
+            try? await Task.sleep(for: .milliseconds(300))
             MenuBarToggle.toggle()
             try? await Task.sleep(for: .seconds(2))
-            var lines: [String] = []
-            for window in NSApp.windows where window.isVisible {
-                let top = window.frame.maxY
-                let barBottom = (window.screen ?? NSScreen.main)?.visibleFrame.maxY ?? -1
-                lines.append("clabar-debug panel class=\(window.className) top=\(Int(top)) menuBarBottom=\(Int(barBottom)) gap=\(Int(barBottom - top))")
+            dumpPanels(stage: "opened")
+            // CLABAR_DEBUG_QUERY=<text>: simulate typing into the search field
+            // one character at a time, dumping panel frames after each step.
+            if let query = ProcessInfo.processInfo.environment["CLABAR_DEBUG_QUERY"] {
+                for n in 1...max(query.count, 1) {
+                    model.search.query = String(query.prefix(n))
+                    try? await Task.sleep(for: .milliseconds(400))
+                    dumpPanels(stage: "typed=\(n)")
+                    // CLABAR_DEBUG_KICK: simulate SwiftUI re-anchoring the
+                    // panel to the wrong display mid-typing.
+                    if n == 4, ProcessInfo.processInfo.environment["CLABAR_DEBUG_KICK"] != nil,
+                       let panel = NSApp.windows.first(where: { $0.className.contains("MenuBarExtra") }),
+                       let other = NSScreen.screens.first(where: { $0 != panel.screen }) {
+                        panel.setFrameOrigin(NSPoint(x: other.frame.midX, y: other.frame.midY))
+                        try? await Task.sleep(for: .milliseconds(400))
+                        dumpPanels(stage: "kicked")
+                    }
+                }
+                try? await Task.sleep(for: .seconds(1))
+                dumpPanels(stage: "settled")
             }
-            FileHandle.standardError.write(Data((lines.joined(separator: "\n") + "\n").utf8))
             return
         }
 
         presentFront { openWindow(id: target) }
         try? await Task.sleep(for: .seconds(1))
+        await debugDumpWindows(target: target)
+    }
+
+    private func dumpPanels(stage: String) {
+        var lines: [String] = ["clabar-debug --- \(stage) main=\(NSScreen.main?.frame ?? .zero) active=\(NSApp.isActive)"]
+        for window in NSApp.windows where window.className.contains("MenuBarExtra") || window.className.contains("StatusBarWindow") {
+            lines.append("clabar-debug \(window.className) frame=\(window.frame) visible=\(window.isVisible) key=\(window.isKeyWindow)")
+        }
+        FileHandle.standardError.write(Data((lines.joined(separator: "\n") + "\n").utf8))
+    }
+
+    private func debugDumpWindows(target: String) async {
         var lines = NSApp.windows.map {
             "clabar-debug window='\($0.title)' visible=\($0.isVisible) key=\($0.isKeyWindow)"
         }

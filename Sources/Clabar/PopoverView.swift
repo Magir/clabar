@@ -298,24 +298,29 @@ private struct MenuBarPanelSnapper: NSViewRepresentable {
 
 private final class SnapperView: NSView {
     private var observers: [NSObjectProtocol] = []
+    /// Where the panel belongs for the current open session, captured when it
+    /// becomes visible. Cleared on hide so the next open can re-capture on
+    /// whatever screen it appears.
+    private var home: (x: CGFloat, top: CGFloat, screen: NSScreen)?
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         observers.forEach { NotificationCenter.default.removeObserver($0) }
         observers = []
         guard let window else { return }
-        Self.snap(window)
+        sync(window)
         let names: [NSNotification.Name] = [
             NSWindow.didResizeNotification,
             NSWindow.didMoveNotification,
             NSWindow.didBecomeKeyNotification,
             NSWindow.didChangeScreenNotification,
+            NSWindow.didChangeOcclusionStateNotification,
         ]
         for name in names {
             observers.append(NotificationCenter.default.addObserver(
                 forName: name, object: window, queue: .main
-            ) { [weak window] _ in
-                Self.snap(window)
+            ) { [weak self, weak window] _ in
+                self?.sync(window)
             })
         }
     }
@@ -324,13 +329,32 @@ private final class SnapperView: NSView {
         observers.forEach { NotificationCenter.default.removeObserver($0) }
     }
 
-    /// The 1px tolerance also breaks the snap→didMove feedback loop.
-    static func snap(_ window: NSWindow?) {
-        guard let window, window.isVisible,
-              let screen = window.screen ?? NSScreen.main else { return }
-        let targetTop = screen.visibleFrame.maxY
-        if abs(window.frame.maxY - targetTop) > 1 {
-            window.setFrameTopLeftPoint(NSPoint(x: window.frame.origin.x, y: targetTop))
+    /// SwiftUI re-anchors the panel on every content resize using the status
+    /// item of whichever display is currently "active" — on multi-display
+    /// setups that teleports the panel to another screen mid-session (each
+    /// keystroke in the search field resizes the content). So: capture the
+    /// top-left at show time and put the panel back whenever ANYTHING moves
+    /// it. The 1px tolerance breaks the enforce→didMove feedback loop.
+    private func sync(_ window: NSWindow?) {
+        guard let window else { return }
+        guard window.isVisible else {
+            home = nil
+            return
+        }
+        if let home, !NSScreen.screens.contains(home.screen) { self.home = nil }
+        if home == nil {
+            guard let screen = window.screen ?? NSScreen.main else { return }
+            home = (x: window.frame.origin.x, top: screen.visibleFrame.maxY, screen: screen)
+        }
+        guard let home else { return }
+        let drifted = abs(window.frame.maxY - home.top) > 1
+            || abs(window.frame.origin.x - home.x) > 1
+        if ProcessInfo.processInfo.environment["CLABAR_DEBUG_SNAP"] != nil {
+            FileHandle.standardError.write(Data(
+                "clabar-snap frame=\(window.frame) home=(\(home.x), \(home.top)) willMove=\(drifted)\n".utf8))
+        }
+        if drifted {
+            window.setFrameTopLeftPoint(NSPoint(x: home.x, y: home.top))
         }
     }
 }
