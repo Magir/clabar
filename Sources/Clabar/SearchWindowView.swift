@@ -4,7 +4,6 @@ import SwiftUI
 struct SearchWindowView: View {
     @ObservedObject var search: SessionSearchService
     @ObservedObject private var lang = LangObserver.shared
-    @FocusState private var fieldFocused: Bool
 
     init(model: AppModel) {
         self.search = model.search
@@ -13,9 +12,8 @@ struct SearchWindowView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
-                SearchField(search: search)
+                SearchField(search: search, autofocus: true)
                     .frame(maxWidth: 420)
-                    .focused($fieldFocused)
                 Spacer()
                 if search.isActive && !search.results.isEmpty {
                     Text("\(search.results.count)")
@@ -29,10 +27,7 @@ struct SearchWindowView: View {
         .frame(minWidth: 560, minHeight: 380)
         .navigationTitle(L("Поиск по сессиям", "Session Search"))
         .environment(\.locale, Lang.locale)
-        .onAppear {
-            DockPolicy.windowShown()
-            fieldFocused = true
-        }
+        .onAppear { DockPolicy.windowShown() }
         .onDisappear { DockPolicy.windowHidden() }
     }
 
@@ -68,6 +63,11 @@ struct SearchWindowView: View {
 /// The shared search text field (popover + window).
 struct SearchField: View {
     @ObservedObject var search: SessionSearchService
+    var autofocus = false
+    /// Invoked when Esc is pressed with the field already empty — the popover
+    /// closes itself, the search window ignores it.
+    var onEmptyEscape: (() -> Void)?
+    @FocusState private var focused: Bool
     @ObservedObject private var lang = LangObserver.shared
 
     var body: some View {
@@ -77,7 +77,22 @@ struct SearchField: View {
             TextField(L("Поиск по сессиям…", "Search sessions…"), text: $search.query)
                 .textFieldStyle(.plain)
                 .font(.callout)
-                .onExitCommand { search.query = "" }
+                .focused($focused)
+                .onExitCommand {
+                    if search.query.isEmpty {
+                        onEmptyEscape?()
+                    } else {
+                        search.query = ""
+                    }
+                }
+                .onAppear {
+                    guard autofocus else { return }
+                    // The field exists a beat before the panel is ready to
+                    // hand out first responder — focus on the next turn.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                        focused = true
+                    }
+                }
             if search.isSearching {
                 ProgressView().controlSize(.small).scaleEffect(0.6)
             } else if search.isActive {

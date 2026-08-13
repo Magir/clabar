@@ -126,9 +126,13 @@ Files (Sources/Clabar/):
   whichever display is currently "active" — the top sags below the menu bar,
   and on multi-display setups the panel can jump to ANOTHER screen mid-session
   (each search keystroke resizes the content → panel flies to the previously
-  active display). `MenuBarPanelSnapper` (NSViewRepresentable in PopoverView)
-  captures the top-left + screen when the panel becomes visible and restores
-  it on every resize/move — keep it attached to the popover root. Debug
+  active display), and while the panel is KEY (focused search field) SwiftUI
+  stops resizing the window to fit the content at all — the frame freezes and
+  the content renders centered in it. `MenuBarPanelSnapper` (NSViewRepresentable
+  in PopoverView) therefore owns BOTH position and size: it captures the
+  top-left + screen when the panel becomes visible and re-applies
+  top-left + the content's natural size on every layout/window event — keep
+  it attached to the popover root. Debug
   harness: `CLABAR_DEBUG_OPEN=popover CLABAR_DEBUG_QUERY=<text>` simulates
   typing into search, `CLABAR_DEBUG_KICK=1` teleports the panel mid-typing
   (snapper must yank it back), `CLABAR_DEBUG_SNAP=1` logs snap decisions.

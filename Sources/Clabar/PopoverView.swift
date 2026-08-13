@@ -20,7 +20,8 @@ struct PopoverView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             header
-            SearchField(search: search)
+            SearchField(search: search, autofocus: true,
+                        onEmptyEscape: { NSApp.keyWindow?.close() })
             if search.isActive {
                 searchSection
             } else {
@@ -308,7 +309,7 @@ private final class SnapperView: NSView {
         observers.forEach { NotificationCenter.default.removeObserver($0) }
         observers = []
         guard let window else { return }
-        sync(window)
+        scheduleSync()
         let names: [NSNotification.Name] = [
             NSWindow.didResizeNotification,
             NSWindow.didMoveNotification,
@@ -319,8 +320,8 @@ private final class SnapperView: NSView {
         for name in names {
             observers.append(NotificationCenter.default.addObserver(
                 forName: name, object: window, queue: .main
-            ) { [weak self, weak window] _ in
-                self?.sync(window)
+            ) { [weak self] _ in
+                self?.scheduleSync()
             })
         }
     }
@@ -329,12 +330,36 @@ private final class SnapperView: NSView {
         observers.forEach { NotificationCenter.default.removeObserver($0) }
     }
 
-    /// SwiftUI re-anchors the panel on every content resize using the status
-    /// item of whichever display is currently "active" — on multi-display
-    /// setups that teleports the panel to another screen mid-session (each
-    /// keystroke in the search field resizes the content). So: capture the
-    /// top-left at show time and put the panel back whenever ANYTHING moves
-    /// it. The 1px tolerance breaks the enforce→didMove feedback loop.
+    /// This view fills the popover root, so its own layout size IS the
+    /// content's natural size — track it: while the panel is key (focused
+    /// search field) SwiftUI stops resizing the window entirely, leaving the
+    /// content floating in the middle of a stale frame.
+    override func setFrameSize(_ newSize: NSSize) {
+        super.setFrameSize(newSize)
+        scheduleSync()
+    }
+
+    /// setFrameSize arrives mid-layout — never touch the window from inside
+    /// layout, coalesce to the next runloop turn instead.
+    private var syncScheduled = false
+    private func scheduleSync() {
+        guard !syncScheduled else { return }
+        syncScheduled = true
+        DispatchQueue.main.async { [weak self] in
+            self?.syncScheduled = false
+            self?.sync(self?.window)
+        }
+    }
+
+    /// The snapper owns BOTH the panel's position and its size:
+    /// - SwiftUI re-anchors the panel on content resizes using the status
+    ///   item of whichever display is "active" — on multi-display setups
+    ///   that can teleport the panel to another screen mid-session;
+    /// - and while the panel is key it stops resizing the window to fit the
+    ///   content altogether (frame freezes, content renders centered).
+    /// So: capture the top-left at show time, then keep the window pinned
+    /// there and sized to the content's natural size. The 1px tolerance
+    /// breaks the enforce→notification feedback loop.
     private func sync(_ window: NSWindow?) {
         guard let window else { return }
         guard window.isVisible else {
@@ -345,16 +370,27 @@ private final class SnapperView: NSView {
         if home == nil {
             guard let screen = window.screen ?? NSScreen.main else { return }
             home = (x: window.frame.origin.x, top: screen.visibleFrame.maxY, screen: screen)
+            // Fresh open: give the panel key status so the auto-focused
+            // search field receives keystrokes without an extra click.
+            window.makeKey()
         }
         guard let home else { return }
-        let drifted = abs(window.frame.maxY - home.top) > 1
-            || abs(window.frame.origin.x - home.x) > 1
+        // Integral size: SwiftUI reports fractional heights, the window frame
+        // rounds them — a fractional target would defeat the 1px tolerance.
+        let size = NSSize(width: bounds.width.rounded(.up),
+                          height: bounds.height.rounded(.up))
+        let desired = NSRect(x: home.x, y: home.top - size.height,
+                             width: size.width, height: size.height)
+        let drifted = abs(window.frame.origin.x - desired.origin.x) > 1
+            || abs(window.frame.origin.y - desired.origin.y) > 1
+            || abs(window.frame.width - desired.width) > 1
+            || abs(window.frame.height - desired.height) > 1
         if ProcessInfo.processInfo.environment["CLABAR_DEBUG_SNAP"] != nil {
             FileHandle.standardError.write(Data(
-                "clabar-snap frame=\(window.frame) home=(\(home.x), \(home.top)) willMove=\(drifted)\n".utf8))
+                "clabar-snap frame=\(window.frame) desired=\(desired) willMove=\(drifted)\n".utf8))
         }
-        if drifted {
-            window.setFrameTopLeftPoint(NSPoint(x: home.x, y: home.top))
+        if size.width > 0, size.height > 0, drifted {
+            window.setFrame(desired, display: true)
         }
     }
 }
