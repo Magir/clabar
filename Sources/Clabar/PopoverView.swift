@@ -4,6 +4,7 @@ struct PopoverView: View {
     @ObservedObject var model: AppModel
     @ObservedObject var usage: UsageService
     @ObservedObject var store: EventStore
+    @ObservedObject var search: SessionSearchService
     @ObservedObject private var lang = LangObserver.shared
     @Environment(\.openWindow) private var openWindow
 
@@ -11,6 +12,7 @@ struct PopoverView: View {
         self.model = model
         self.usage = model.usage
         self.store = model.store
+        self.search = model.search
     }
 
     @AppStorage("autostartOffered") private var autostartOffered = false
@@ -18,24 +20,29 @@ struct PopoverView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             header
-            autostartOffer
-            if usage.isAuthenticated {
-                nudgeBanners
-                usageSection
-                Divider()
-                UsageChartView(historyService: model.history)
+            SearchField(search: search)
+            if search.isActive {
+                searchSection
             } else {
-                signInSection
-            }
-            Divider()
-            notificationsSection
-            if let error = usage.lastError {
-                Label(error, systemImage: "exclamationmark.triangle")
-                    .foregroundStyle(.red).font(.caption)
-            }
-            if let error = model.serverError {
-                Label(error, systemImage: "bolt.horizontal.circle")
-                    .foregroundStyle(.red).font(.caption)
+                autostartOffer
+                if usage.isAuthenticated {
+                    nudgeBanners
+                    usageSection
+                    Divider()
+                    UsageChartView(historyService: model.history)
+                } else {
+                    signInSection
+                }
+                Divider()
+                notificationsSection
+                if let error = usage.lastError {
+                    Label(error, systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.red).font(.caption)
+                }
+                if let error = model.serverError {
+                    Label(error, systemImage: "bolt.horizontal.circle")
+                        .foregroundStyle(.red).font(.caption)
+                }
             }
             Divider()
             footer
@@ -200,6 +207,34 @@ struct PopoverView: View {
             Text(L("Вход нужен только для лимитов — уведомления, история и настройки работают и без него.",
                    "Sign-in is only needed for limits — notifications, history and settings work without it."))
                 .font(.caption2).foregroundStyle(.tertiary)
+        }
+    }
+
+    // MARK: - Session search
+
+    @ViewBuilder
+    private var searchSection: some View {
+        if let progress = search.indexingProgress {
+            SearchIndexingView(progress: progress)
+                .frame(maxWidth: .infinity)
+        } else if search.results.isEmpty {
+            if !search.isSearching {
+                Text(L("Ничего не найдено.", "Nothing found."))
+                    .font(.caption).foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+            }
+        } else {
+            ForEach(search.results.prefix(5)) { result in
+                SearchResultRow(result: result)
+            }
+            Button(L("Открыть окно поиска…", "Open search window…")) {
+                presentFront { openWindow(id: "search") }
+            }
+            .buttonStyle(.borderless).font(.caption)
+        }
+        if let error = search.lastError {
+            Label(error, systemImage: "exclamationmark.triangle")
+                .foregroundStyle(.red).font(.caption)
         }
     }
 

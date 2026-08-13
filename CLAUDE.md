@@ -87,11 +87,19 @@ Two data flows:
 
 Files (Sources/Clabar/):
 
-- `ClabarApp.swift` — scenes (MenuBarExtra + Window "log"/"settings"), menu bar
+- `ClabarApp.swift` — scenes (MenuBarExtra + Window "log"/"settings"/"search"), menu bar
   label, `presentFront`, `DockPolicy`, debug auto-open hook
 - `AppModel.swift` — singleton wiring of all services; `SettingsKeys` + defaults
 - `UsageModel/UsageService/StoredCredentials/HistoryService` — usage core (ported)
 - `Events.swift` — event model, classifier, store (recording filter lives here)
+- `SessionSearch.swift` — full-text session search: `SearchEngine` (SQLite FTS5
+  + snowball stemming via the vendored `Sources/CSnowball` C target; indexes
+  ALL per-language stem variants of each token, so one query matches word
+  forms in any shipped language) + `SessionSearchService` (debounced UI
+  facade). Index: `CLABAR_DATA_DIR/search-index.db`, rebuilt incrementally by
+  mtime on every search; full rebuild = delete the file.
+- `SearchWindowView.swift` — search window + `SearchField`/`SearchResultRow`
+  shared with the popover
 - `EventServer.swift` / `Notifier.swift` / `SessionFocus.swift` — pipeline
 - `HookInstaller.swift` — hook script content, settings.json merge (idempotent,
   cleans its own stale registrations), devcontainer.json patcher

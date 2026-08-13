@@ -32,7 +32,7 @@ final class ClabarAppDelegate: NSObject, NSApplicationDelegate {
         if updating { return .terminateNow }
 
         let realWindows = NSApp.windows.filter { window in
-            window.isVisible && ["log", "settings"].contains {
+            window.isVisible && ["log", "settings", "search"].contains {
                 window.identifier?.rawValue.hasPrefix($0) == true
             }
         }
@@ -63,6 +63,11 @@ struct ClabarApp: App {
             LogWindowView(model: model)
         }
         .defaultSize(width: 820, height: 480)
+
+        Window(L("Поиск по сессиям", "Session Search"), id: "search") {
+            SearchWindowView(model: model)
+        }
+        .defaultSize(width: 640, height: 480)
 
         // A plain Window instead of the Settings scene: LSUIElement apps have no
         // menu bar entry anyway, and Settings silently no-ops when the app is
@@ -108,7 +113,7 @@ func presentFront(_ open: () -> Void) {
     DockPolicy.prepareForWindow()
     let clickSource = NSApp.keyWindow
     open()
-    let isRealWindow = ["settings", "log"].contains { id in
+    let isRealWindow = ["settings", "log", "search"].contains { id in
         clickSource?.identifier?.rawValue.hasPrefix(id) == true
     }
     if !isRealWindow { clickSource?.close() }

@@ -44,6 +44,7 @@ final class AppModel: ObservableObject {
     let usage = UsageService()
     let history = HistoryService()
     let store = EventStore()
+    let search = SessionSearchService()
     let notifier: Notifier
     let updater = AppUpdater()
     private var server: EventServer?

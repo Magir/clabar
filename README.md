@@ -33,6 +33,7 @@ Alternatively, [download Clabar.zip](https://github.com/Magir/clabar/releases/la
 - **Usage limits**: the 5-hour window, the weekly window, and any per-model windows (Fable, Opus, …) the API reports — new limit types show up automatically. Usage history chart (1h–30d ranges).
 - **Notifications from Claude Code** via hooks: asks (permission requests, questions, plan ready), task completion, failures — each with its own icon. System banners; clicking one (or the Open session button) jumps to the app hosting the session (VS Code opens the right folder).
 - **Notification history**: a separate window with a sortable table, filters by type / unread / free-text search. Double-click opens the session.
+- **Full-text session search**: type in the popover to search the entire text of your Claude Code sessions (`~/.claude/projects`), morphology-aware in ru/en/es/pt/fr/de («проверка контрагентов» finds «проверить контрагента»). Results show the session title and highlighted snippets; a click copies the `claude --resume` command, a separate window offers the full list.
 - **“Burn the limit” reminder**: when less than N% of the weekly window is used and the reset is under M hours away — 🔥 in the icon and a banner in the popover.
 - **“Running low” warning**: the reverse — when any window (5-hour, weekly, per-model) is above a configurable threshold (85% by default), ⚠️ in the icon and a red banner.
 - **Global hotkey**: ⌘U (configurable in Settings) opens the popover from anywhere.

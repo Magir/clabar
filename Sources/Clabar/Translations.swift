@@ -20,6 +20,18 @@ enum Translations {
         "Task finished": ["es": "Tarea terminada", "pt": "Tarefa concluída", "fr": "Tâche terminée", "de": "Aufgabe abgeschlossen", "uk": "Завдання завершено"],
         "Tool failed: ": ["es": "Falló la herramienta: ", "pt": "Falha na ferramenta: ", "fr": "Échec de l'outil : ", "de": "Werkzeugfehler: ", "uk": "Збій інструмента: "],
 
+        // MARK: Session search
+        "Search sessions…": ["es": "Buscar sesiones…", "pt": "Pesquisar sessões…", "fr": "Rechercher des sessions…", "de": "Sitzungen durchsuchen…", "uk": "Пошук сесій…"],
+        "Indexing sessions…": ["es": "Indexando sesiones…", "pt": "Indexando sessões…", "fr": "Indexation des sessions…", "de": "Sitzungen werden indiziert…", "uk": "Індексування сесій…"],
+        "Nothing found.": ["es": "No se encontró nada.", "pt": "Nada encontrado.", "fr": "Rien trouvé.", "de": "Nichts gefunden.", "uk": "Нічого не знайдено."],
+        "Open search window…": ["es": "Abrir ventana de búsqueda…", "pt": "Abrir janela de pesquisa…", "fr": "Ouvrir la fenêtre de recherche…", "de": "Suchfenster öffnen…", "uk": "Відкрити вікно пошуку…"],
+        "Copied": ["es": "Copiado", "pt": "Copiado", "fr": "Copié", "de": "Kopiert", "uk": "Скопійовано"],
+        "Copy resume command": ["es": "Copiar comando resume", "pt": "Copiar comando resume", "fr": "Copier la commande resume", "de": "Resume-Befehl kopieren", "uk": "Скопіювати resume-команду"],
+        "Copy title": ["es": "Copiar título", "pt": "Copiar título", "fr": "Copier le titre", "de": "Titel kopieren", "uk": "Скопіювати назву"],
+        "Open project in VS Code": ["es": "Abrir proyecto en VS Code", "pt": "Abrir projeto no VS Code", "fr": "Ouvrir le projet dans VS Code", "de": "Projekt in VS Code öffnen", "uk": "Відкрити проєкт у VS Code"],
+        "Session Search": ["es": "Búsqueda de sesiones", "pt": "Pesquisa de sessões", "fr": "Recherche de sessions", "de": "Sitzungssuche", "uk": "Пошук сесій"],
+        "Type a query — searches the full text of your Claude Code sessions, morphology-aware.": ["es": "Escribe una consulta: busca en todo el texto de tus sesiones de Claude Code, con morfología.", "pt": "Digite uma consulta — pesquisa no texto completo das suas sessões do Claude Code, com morfologia.", "fr": "Saisissez une requête — recherche dans tout le texte de vos sessions Claude Code, avec morphologie.", "de": "Suchanfrage eingeben — durchsucht den gesamten Text Ihrer Claude-Code-Sitzungen, morphologiebewusst.", "uk": "Введіть запит — шукає в усьому тексті сесій Claude Code, з урахуванням словоформ."],
+
         // MARK: Notification actions
 
         // MARK: Popover
