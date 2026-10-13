@@ -486,3 +486,16 @@ final class EventStoreTests: XCTestCase {
         XCTAssertEqual(store.events.count, 2)
     }
 }
+
+final class RelativeTimeTests: XCTestCase {
+    override func setUp() { UserDefaults.standard.set("en", forKey: "appLanguage") }
+    override func tearDown() { UserDefaults.standard.removeObject(forKey: "appLanguage") }
+
+    func testFormatsHoursMinutesAndSecondsBothDirections() {
+        let now = Date(timeIntervalSince1970: 1_000_000)
+        XCTAssertEqual(relativeSpan(now.addingTimeInterval(2 * 3600 + 15 * 60), now: now), "2h 15m")
+        XCTAssertEqual(relativeSpan(now.addingTimeInterval(-3 * 60), now: now), "3m")
+        XCTAssertEqual(relativeSpan(now.addingTimeInterval(-20), now: now), "20s")
+        XCTAssertEqual(relativeSpan(now.addingTimeInterval(3 * 86400 + 5 * 3600), now: now), "3d 5h")
+    }
+}

@@ -53,7 +53,7 @@ final class AppModel: ObservableObject {
     @Published var serverError: String?
     /// Event whose details the history window should show once it opens.
     @Published var pendingDetailEvent: ClaudeEvent?
-    /// Ticks every few minutes so time-based UI (nudge, "resets in…") stays fresh.
+    /// Ticks every minute so time-based UI (nudge, "resets in…") stays fresh.
     @Published var now = Date()
 
     private var started = false
@@ -77,7 +77,7 @@ final class AppModel: ObservableObject {
         startServer()
         autoInstallHooks()
 
-        clockTimer = Timer.publish(every: 300, on: .main, in: .common)
+        clockTimer = Timer.publish(every: 60, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] date in self?.now = date }
 

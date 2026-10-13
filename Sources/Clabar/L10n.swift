@@ -88,3 +88,18 @@ final class LangObserver: ObservableObject {
         language = AppLanguage(rawValue: UserDefaults.standard.string(forKey: Lang.defaultsKey) ?? "auto") ?? .auto
     }
 }
+
+/// Static "2h 15m" span between two dates, localized. Replaces SwiftUI's
+/// `Text(date, style: .relative)`: that one ticks every second and re-lays out
+/// the whole (hidden) popover — ~10% CPU at idle. Callers re-render on
+/// `AppModel.now`, so the string stays fresh to the minute.
+func relativeSpan(_ date: Date, now: Date = Date()) -> String {
+    let interval = abs(date.timeIntervalSince(now))
+    let f = DateComponentsFormatter()
+    f.calendar = Calendar.current
+    f.calendar?.locale = Lang.locale
+    f.unitsStyle = .abbreviated
+    f.maximumUnitCount = 2
+    f.allowedUnits = interval < 60 ? [.second] : [.day, .hour, .minute]
+    return f.string(from: interval) ?? ""
+}

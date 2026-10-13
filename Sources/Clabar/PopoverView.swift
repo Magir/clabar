@@ -107,7 +107,7 @@ struct PopoverView: View {
             banner(
                 emoji: "🔥",
                 title: "\(nudge.label): \(L("не потрачено", "unused")) \(Int(round(nudge.leftPct * 100)))% \(L("лимита", "of the limit"))",
-                subtitle: "\(L("Сброс", "Resets")) \(Text(nudge.resetsAt, style: .relative)) — \(L("самое время нагрузить Клода!", "time to put Claude to work!"))",
+                subtitle: "\(L("Сброс", "Resets")) \(relativeSpan(nudge.resetsAt, now: model.now)) — \(L("самое время нагрузить Клода!", "time to put Claude to work!"))",
                 color: .orange
             )
         }
@@ -115,7 +115,7 @@ struct PopoverView: View {
             banner(
                 emoji: "⚠️",
                 title: "\(warning.label): \(L("осталось", "only")) \(Int(round(warning.leftPct * 100)))% \(L("лимита", "of the limit left"))",
-                subtitle: "\(L("Сброс", "Resets")) \(Text(warning.resetsAt, style: .relative)) — \(L("притормози или дождись сброса.", "ease off or wait for the reset."))",
+                subtitle: "\(L("Сброс", "Resets")) \(relativeSpan(warning.resetsAt, now: model.now)) — \(L("притормози или дождись сброса.", "ease off or wait for the reset."))",
                 color: .red
             )
         }
@@ -149,7 +149,7 @@ struct PopoverView: View {
                 serviceStatusChip(status)
             }
             if let updated = usage.lastUpdated {
-                Text("\(L("Обновлено", "Updated")) \(updated, style: .relative) \(L("назад", "ago"))")
+                Text("\(L("Обновлено", "Updated")) \(relativeSpan(updated, now: model.now)) \(L("назад", "ago"))")
                     .font(.caption2).foregroundStyle(.tertiary)
             }
         } else {
@@ -403,6 +403,7 @@ struct EventRow: View {
     /// Invoked on row click — opens the event details in the history window.
     let onDetails: () -> Void
     @ObservedObject private var lang = LangObserver.shared
+    @ObservedObject private var clock = AppModel.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
@@ -420,7 +421,7 @@ struct EventRow: View {
                             .font(.caption.weight(event.read ? .regular : .semibold))
                             .lineLimit(2)
                             .multilineTextAlignment(.leading)
-                        Text("\(event.project) · \(event.sourceName) · \(event.date, style: .relative)")
+                        Text("\(event.project) · \(event.sourceName) · \(relativeSpan(event.date, now: clock.now))")
                             .font(.caption2)
                             .foregroundStyle(.tertiary)
                     }
@@ -459,6 +460,7 @@ struct EventRow: View {
 struct UsageBucketRow: View {
     let named: NamedBucket
     @ObservedObject private var lang = LangObserver.shared
+    @ObservedObject private var clock = AppModel.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
@@ -470,7 +472,7 @@ struct UsageBucketRow: View {
             ProgressView(value: named.pct, total: 1.0)
                 .tint(colorForPct(named.pct))
             if let resetDate = named.bucket.resetsAtDate {
-                Text("\(L("Сброс", "Resets")) \(resetDate, style: .relative)")
+                Text("\(L("Сброс", "Resets")) \(relativeSpan(resetDate, now: clock.now))")
                     .font(.caption2).foregroundStyle(.secondary)
             }
         }
